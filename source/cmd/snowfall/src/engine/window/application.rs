@@ -1,43 +1,28 @@
-use super::internal::*;
+/// Application is the concrete implementation that implements the
+/// `ApplicationHandler` trait to handle events from the event loop.
+///
+/// It is intended to fully encapsulate the winit implementation details.
+///
+pub use super::internal::*;
 
-pub fn init_event_loop() {
-    let event_loop = {
-        let mut builder = EventLoop::builder();
-
-        // TODO: this needs to be conditional behind a --development flag What it does it
-        // ensures when the new window is created, it will **not** steal focus, which is
-        // very useful for auto-recompiling so the focus is not stolen from the code
-        // editor.
-        #[cfg(target_os = "macos")]
-        {
-            use winit::platform::macos::EventLoopBuilderExtMacOS;
-            builder.with_activate_ignoring_other_apps(false);
-        }
-
-        builder.build().unwrap()
-    };
-    event_loop.set_control_flow(ControlFlow::Poll);
-
-    let mut app = SnowfallApp { window: None };
-    event_loop.run_app(&mut app).unwrap();
-
-    println!("Event loop initialized");
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-struct WindowState {
-    position: (i32, i32),
-    size: (u32, u32),
-}
-
-struct SnowfallApp {
+pub struct Application {
     // The winit window
     window: Option<Arc<Window>>,
+    engine: Arc<Engine>,
 }
 
-impl ApplicationHandler for SnowfallApp {
+impl Application {
+    pub fn new(engine: Arc<Engine>) -> Self {
+        Self {
+            window: None,
+            engine,
+        }
+    }
+}
+
+impl ApplicationHandler for Application {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window_state = match local_storage_get::<WindowState>("window_state") {
+        let window_state = match self.engine.local_storage.get::<WindowState>("window_state") {
             Some(state) => state,
             None => WindowState {
                 position: (0, 0),
@@ -51,8 +36,8 @@ impl ApplicationHandler for SnowfallApp {
         let size = PhysicalSize::new(window_state.size.0, window_state.size.1);
 
         let window_attributes = Window::default_attributes()
-            .with_title("Snowfall")
-            .with_active(false)
+            .with_title(self.engine.title.clone())
+            .with_active(!self.engine.development_mode)
             .with_position(position)
             .with_inner_size(size);
 
@@ -81,7 +66,7 @@ impl ApplicationHandler for SnowfallApp {
                 event_loop.exit();
             }
             WindowEvent::Moved(position) => {
-                local_storage_set(
+                self.engine.local_storage.set(
                     "window_state",
                     &WindowState {
                         position: (position.x, position.y),

@@ -1,12 +1,17 @@
-mod init_event_loop;
+mod application;
+mod run_event_loop;
+mod window_state;
 
 pub mod prelude {
-    pub use super::init_event_loop::init_event_loop;
+    pub use super::run_event_loop::run_event_loop;
 }
 
 pub mod internal {
+    pub use super::application::*;
     pub use super::prelude::*;
+    pub use super::window_state::*;
 
+    pub use crate::Engine;
     pub use crate::core::*;
 
     pub use std::sync::Arc;
