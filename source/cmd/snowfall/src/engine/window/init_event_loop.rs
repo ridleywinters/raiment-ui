@@ -18,7 +18,7 @@ pub fn init_event_loop() {
     };
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    let mut app = AutumnApp { window: None };
+    let mut app = SnowfallApp { window: None };
     event_loop.run_app(&mut app).unwrap();
 
     println!("Event loop initialized");
@@ -30,12 +30,12 @@ struct WindowState {
     size: (u32, u32),
 }
 
-struct AutumnApp {
+struct SnowfallApp {
     // The winit window
     window: Option<Arc<Window>>,
 }
 
-impl ApplicationHandler for AutumnApp {
+impl ApplicationHandler for SnowfallApp {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let window_state = match local_storage_get::<WindowState>("window_state") {
             Some(state) => state,
@@ -51,7 +51,7 @@ impl ApplicationHandler for AutumnApp {
         let size = PhysicalSize::new(window_state.size.0, window_state.size.1);
 
         let window_attributes = Window::default_attributes()
-            .with_title("Autumn")
+            .with_title("Snowfall")
             .with_active(false)
             .with_position(position)
             .with_inner_size(size);
