@@ -3,6 +3,7 @@ mod run_event_loop;
 mod window_state;
 
 pub mod prelude {
+    pub use super::run_event_loop::init;
     pub use super::run_event_loop::run_event_loop;
 }
 
