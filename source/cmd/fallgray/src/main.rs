@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
 
 fn main() {
@@ -53,23 +54,51 @@ fn setup_system(
     // Add some 8x8x8 cubes as reference points
     let cube_mesh = meshes.add(Cuboid::new(8.0, 8.0, 8.0));
 
-    // Create cubes with different colors at various positions
-    // Using PICO-8 palette colors
-    let cube_positions = [
-        (Vec3::new(304.0, 304.0, 4.0), Color::srgb(1.0, 0.0, 0.3)), // 50+256, 50+256
-        (Vec3::new(200.0, 304.0, 4.0), Color::srgb(0.0, 0.89, 0.21)), // -50+256, 50+256
-        (Vec3::new(304.0, 200.0, 4.0), Color::srgb(0.16, 0.67, 1.0)), // 50+256, -50+256
-        (Vec3::new(200.0, 200.0, 4.0), Color::srgb(1.0, 0.95, 0.27)), // -50+256, -50+256
-        (Vec3::new(256.0, 352.0, 4.0), Color::srgb(1.0, 0.47, 0.77)), // 0+256, 100+256
-        (Vec3::new(352.0, 256.0, 4.0), Color::srgb(0.51, 0.95, 1.0)), // 100+256, 0+256
+    // PICO-8 palette colors
+    let pico8_colors = [
+        Color::srgb(0.0, 0.0, 0.0),          // Black
+        Color::srgb(0.11, 0.17, 0.33),       // Dark blue
+        Color::srgb(0.49, 0.15, 0.35),       // Dark purple
+        Color::srgb(0.0, 0.53, 0.33),        // Dark green
+        Color::srgb(0.67, 0.32, 0.21),       // Brown
+        Color::srgb(0.37, 0.35, 0.31),       // Dark gray
+        Color::srgb(0.76, 0.76, 0.78),       // Light gray
+        Color::srgb(1.0, 0.95, 0.91),        // White
+        Color::srgb(1.0, 0.0, 0.3),          // Red
+        Color::srgb(1.0, 0.64, 0.0),         // Orange
+        Color::srgb(1.0, 0.95, 0.27),        // Yellow
+        Color::srgb(0.0, 0.89, 0.21),        // Green
+        Color::srgb(0.16, 0.67, 1.0),        // Blue
+        Color::srgb(0.51, 0.46, 0.61),       // Indigo
+        Color::srgb(1.0, 0.47, 0.77),        // Pink
+        Color::srgb(1.0, 0.8, 0.67),         // Peach
     ];
 
-    for (position, color) in cube_positions {
-        commands.spawn((
-            Mesh3d(cube_mesh.clone()),
-            MeshMaterial3d(materials.add(color)),
-            Transform::from_translation(position),
-        ));
+    // Load map from data/map.txt
+    let map_content = std::fs::read_to_string("data/map.txt")
+        .expect("Failed to read data/map.txt");
+    
+    let mut rng = rand::rng();
+    
+    // Parse the map and create cubes for each 'X'
+    for (row, line) in map_content.lines().enumerate() {
+        for (col, ch) in line.chars().enumerate() {
+            if ch == 'X' {
+                // Position: each cell is 8x8, so multiply by 8
+                let x = col as f32 * 8.0;
+                let y = row as f32 * 8.0;
+                let z = 4.0; // Place cubes at z=4 (half height above ground)
+                
+                // Pick a random PICO-8 color
+                let color = pico8_colors[rng.random_range(0..pico8_colors.len())];
+                
+                commands.spawn((
+                    Mesh3d(cube_mesh.clone()),
+                    MeshMaterial3d(materials.add(color)),
+                    Transform::from_translation(Vec3::new(x, y, z)),
+                ));
+            }
+        }
     }
 
     // Light (offset by 256 in X and Y)
