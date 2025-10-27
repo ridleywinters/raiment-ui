@@ -2,18 +2,40 @@ use bevy::prelude::*;
 use rand::Rng;
 use std::f32::consts::FRAC_PI_2;
 
+const PLAYER_LIGHT_OFFSET: f32 = 4.0;
+
 fn main() {
+    // Get asset path from REPO_ROOT environment variable
+    let asset_path = std::env::var("REPO_ROOT")
+        .map(|repo_root| format!("{}/source/assets", repo_root))
+        .unwrap_or_else(|_| "assets".to_string());
+
     App::new()
-        .add_plugins(DefaultPlugins.set(bevy::window::WindowPlugin {
-            primary_window: Some(bevy::window::Window {
-                title: "Fallgray".into(),
-                resolution: (1920, 1080).into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(bevy::asset::AssetPlugin {
+                    file_path: asset_path,
+                    ..default()
+                })
+                .set(bevy::window::WindowPlugin {
+                    primary_window: Some(bevy::window::Window {
+                        title: "Fallgray".into(),
+                        resolution: (1920, 1080).into(),
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .add_systems(Startup, setup_system)
-        .add_systems(Update, camera_control_system)
+        .add_systems(
+            Update,
+            (
+                camera_control_system,
+                update_player_light,
+                animate_player_light,
+                configure_stone_texture,
+            ),
+        )
         .run();
 }
 
@@ -23,11 +45,30 @@ struct Player {
     rot_speed: f32,
 }
 
+#[derive(Component)]
+struct PlayerLight;
+
+#[derive(Component)]
+struct LightColorAnimation {
+    time: f32,
+    speed: f32,
+}
+
+impl Default for LightColorAnimation {
+    fn default() -> Self {
+        Self {
+            time: 0.0,
+            speed: 1.0,
+        }
+    }
+}
+
 fn setup_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    asset_server: Res<AssetServer>,
 ) {
     // Create a checker pattern texture
     let checker_image = create_checker_texture(512, 512);
@@ -38,22 +79,52 @@ fn setup_system(
     let plane_material = materials.add(StandardMaterial {
         base_color_texture: Some(checker_texture),
         base_color: Color::WHITE,
-        perceptual_roughness: 1.0, // Make it completely matte (not shiny)
-        metallic: 0.0,             // Not metallic
-        reflectance: 0.0,          // No reflectance
+        perceptual_roughness: 1.0,
+        metallic: 0.0,
+        reflectance: 0.0,
         uv_transform: bevy::math::Affine2::from_scale(Vec2::new(4.0, 4.0)),
         ..default()
     });
+    let plane_material2 = materials.add(StandardMaterial {
+        base_color_texture: Some(asset_server.load("base/textures/stone.png")),
+        base_color: Color::WHITE,
+        perceptual_roughness: 1.0,
+        metallic: 0.0,
+        reflectance: 0.0,
+        uv_transform: bevy::math::Affine2::from_scale(Vec2::new(64.0, 64.0)),
+        ..default()
+    });
+
     commands.spawn((
-        Mesh3d(plane_mesh),
-        MeshMaterial3d(plane_material),
+        Mesh3d(plane_mesh.clone()),
+        MeshMaterial3d(plane_material2.clone()),
         // Rotate 90 degrees around X to make it XY plane (facing Z)
         Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2))
             .with_translation(Vec3::new(256.0, 256.0, 0.0)),
     ));
 
+    commands.spawn((
+        Mesh3d(plane_mesh.clone()),
+        MeshMaterial3d(plane_material2.clone()),
+        Transform::from_rotation(Quat::from_rotation_x(3.0 * FRAC_PI_2))
+            .with_translation(Vec3::new(256.0, 256.0, 16.0)),
+    ));
+
     // Add some 8x8x8 cubes as reference points
-    let cube_mesh = meshes.add(Cuboid::new(8.0, 8.0, 8.0));
+    // Translate the mesh by +4.0 in Z so cubes sit on the ground plane
+    let cube_mesh = meshes.add(
+        Cuboid::new(8.0, 8.0, 8.0)
+            .mesh()
+            .build()
+            .translated_by(Vec3::new(0.0, 0.0, 4.0)),
+    );
+
+    let cube_mesh2 = meshes.add(
+        Cuboid::new(8.0, 8.0, 16.0)
+            .mesh()
+            .build()
+            .translated_by(Vec3::new(0.0, 0.0, 8.0)),
+    );
 
     // PICO-8 palette colors
     let pico8_colors = [
@@ -83,54 +154,61 @@ fn setup_system(
     // Parse the map and create cubes for each 'X'
     for (row, line) in map_content.lines().enumerate() {
         for (col, ch) in line.chars().enumerate() {
-            if ch == 'X' {
-                // Position: each cell is 8x8, so multiply by 8
-                let x = col as f32 * 8.0;
-                let y = row as f32 * 8.0;
-                let z = 4.0; // Place cubes at z=4 (half height above ground)
+            let mesh = match ch {
+                'X' => cube_mesh2.clone(),
+                'x' => cube_mesh.clone(),
+                _ => continue,
+            };
 
-                // Pick a random PICO-8 color
-                let color = pico8_colors[rng.random_range(0..pico8_colors.len())];
+            // Position: each cell is 8x8, so multiply by 8
+            let x = col as f32 * 8.0;
+            let y = row as f32 * 8.0;
 
-                commands.spawn((
-                    Mesh3d(cube_mesh.clone()),
-                    MeshMaterial3d(materials.add(color)),
-                    Transform::from_translation(Vec3::new(x, y, z)),
-                ));
-            }
+            // Pick a random PICO-8 color
+            let color = pico8_colors[rng.random_range(0..pico8_colors.len())];
+
+            commands.spawn((
+                Mesh3d(mesh),
+                MeshMaterial3d(materials.add(color)),
+                Transform::from_translation(Vec3::new(x, y, 0.0)),
+            ));
         }
     }
 
-    commands.spawn((
-        DirectionalLight {
-            color: Color::WHITE,
-            illuminance: 10000.0,
-            shadows_enabled: true,
-            shadow_depth_bias: 0.02,
-            shadow_normal_bias: 0.6,
-            ..default()
-        },
-        bevy::light::CascadeShadowConfigBuilder {
-            maximum_distance: 1000.0,
-            first_cascade_far_bound: 50.0,
-            ..Default::default()
-        }
-        .build(),
-        Transform::from_xyz(260.0, 264.0, 4.0).looking_at(Vec3::new(256.0, 256.0, 0.0), Vec3::Y),
-    ));
     commands.insert_resource(bevy::light::AmbientLight {
         color: Color::WHITE,
-        brightness: 300.0,
+        brightness: 1.0,
         affects_lightmapped_meshes: false,
     });
 
+    let player_start_pos = Vec3::new(256.0, 206.0, 6.4);
+
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(256.0, 206.0, 6.4).looking_at(Vec3::new(-2092.0, 344.0, 6.4), Vec3::Z),
+        Transform::from_xyz(player_start_pos.x, player_start_pos.y, player_start_pos.z)
+            .looking_at(Vec3::new(-2092.0, 344.0, 6.4), Vec3::Z),
         Player {
             speed: 50.0,
             rot_speed: 1.5,
         },
+    ));
+
+    // Add a point light that follows the player
+    commands.spawn((
+        PointLight {
+            color: Color::WHITE,
+            intensity: 5000000.0,
+            range: 64.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::from_xyz(
+            player_start_pos.x,
+            player_start_pos.y,
+            player_start_pos.z + PLAYER_LIGHT_OFFSET,
+        ),
+        PlayerLight, // Marker component to identify this light
+        LightColorAnimation::default(),
     ));
 }
 
@@ -234,6 +312,101 @@ fn camera_control_system(
         if movement_z != 0.0 {
             transform.translation.z += movement_z * player.speed * dt;
         }
+    }
+}
+
+fn update_player_light(
+    player_query: Query<&Transform, With<Player>>,
+    mut light_query: Query<&mut Transform, (With<PlayerLight>, Without<Player>)>,
+) {
+    if let Ok(player_transform) = player_query.single() {
+        if let Ok(mut light_transform) = light_query.single_mut() {
+            // Position the light slightly above the player
+            light_transform.translation =
+                player_transform.translation + Vec3::new(0.0, 0.0, PLAYER_LIGHT_OFFSET);
+        }
+    }
+}
+
+fn hex_to_color(hex: &str) -> Color {
+    let hex = hex.trim_start_matches('#');
+
+    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255) as f32 / 255.0;
+    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255) as f32 / 255.0;
+    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255) as f32 / 255.0;
+
+    Color::srgb(r, g, b)
+}
+
+fn animate_player_light(
+    time: Res<Time>,
+    mut light_query: Query<(&mut PointLight, &mut LightColorAnimation), With<PlayerLight>>,
+) {
+    if let Ok((mut light, mut anim)) = light_query.single_mut() {
+        let dt = time.delta_secs();
+        anim.time += 0.1 * dt * anim.speed;
+
+        let light_yellow = hex_to_color("#e8d599");
+        let red = hex_to_color("#ffb96e");
+        let yellow_white = hex_to_color("#e4bb6f");
+
+        // Create a smooth oscillation through the three colors
+        // Use sine wave that goes 0 -> 1 -> 2 -> 1 -> 0 (one full cycle)
+        let t = (anim.time * std::f32::consts::PI).sin().abs();
+
+        // Map t (0 to 1) to blend between the three colors
+        let color = if t < 0.5 {
+            // Blend from light_yellow to red
+            let blend = t * 2.0; // 0 to 1
+            Color::srgb(
+                light_yellow.to_srgba().red * (1.0 - blend) + red.to_srgba().red * blend,
+                light_yellow.to_srgba().green * (1.0 - blend) + red.to_srgba().green * blend,
+                light_yellow.to_srgba().blue * (1.0 - blend) + red.to_srgba().blue * blend,
+            )
+        } else {
+            // Blend from red to yellow_white
+            let blend = (t - 0.5) * 2.0; // 0 to 1
+            Color::srgb(
+                red.to_srgba().red * (1.0 - blend) + yellow_white.to_srgba().red * blend,
+                red.to_srgba().green * (1.0 - blend) + yellow_white.to_srgba().green * blend,
+                red.to_srgba().blue * (1.0 - blend) + yellow_white.to_srgba().blue * blend,
+            )
+        };
+
+        light.color = color;
+
+        // When we complete a cycle, randomize the speed for next cycle (+/- 20%)
+        if anim.time >= 2.0 {
+            anim.time = 0.0;
+            let mut rng = rand::rng();
+            anim.speed = 1.0 + rng.random_range(-0.2..0.2);
+        }
+    }
+}
+
+fn configure_stone_texture(
+    asset_server: Res<AssetServer>,
+    mut images: ResMut<Assets<Image>>,
+    mut configured: Local<bool>,
+) {
+    // Only run once
+    if *configured {
+        return;
+    }
+
+    // Check if the stone texture is loaded
+    let handle: Handle<Image> = asset_server.load("base/textures/stone.png");
+    if let Some(image) = images.get_mut(&handle) {
+        // Configure the sampler for repeat mode and nearest filtering
+        image.sampler =
+            bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
+                address_mode_u: bevy::image::ImageAddressMode::Repeat,
+                address_mode_v: bevy::image::ImageAddressMode::Repeat,
+                mag_filter: bevy::image::ImageFilterMode::Nearest,
+                min_filter: bevy::image::ImageFilterMode::Nearest,
+                ..Default::default()
+            });
+        *configured = true;
     }
 }
 
