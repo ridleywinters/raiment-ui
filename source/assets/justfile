@@ -1,0 +1,13 @@
+SCRIPTS := "${REPO_ROOT}/source/scripts"
+EXPANDED := "${REPO_ROOT}/extern/expanded"
+
+build:
+    cd ${REPO_ROOT}/extern && just expand
+    @just build-tiny-textures
+
+[private]
+build-tiny-textures:
+    {{SCRIPTS}}/extract_texture.ts \
+        "{{EXPANDED}}/tiny_textures/pack-3/512x512/Stone/Stone_16-512x512.png" \
+        "{{EXPANDED}}/tiny_textures/attribution.meta.md" \
+        "64x64" "./base/textures/stone.png"

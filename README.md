@@ -40,7 +40,8 @@ Contributions are very welcome!
 ```
 bin/                - locally installed binaries
 config/             - <placeholder>
-resources/          - non-game assets like
+resources/          - non-game assets
+extern/             - external assets (not created by contributors)
 source/             - all source code
     assets/         - <placeholder>
     cmd/            - all binaries
@@ -48,7 +49,7 @@ source/             - all source code
     common/         - source related files used by multiple projects
     crates/         - shared Rust libraries
     modules/        - shared TypeScript libraries
-    scripts/        - build-related scripts
+    scripts/        - build-related single-file scripts
     tools/          - larger utilities
 ```
 
