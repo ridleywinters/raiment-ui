@@ -41,6 +41,7 @@ fn setup_system(
         perceptual_roughness: 1.0, // Make it completely matte (not shiny)
         metallic: 0.0,             // Not metallic
         reflectance: 0.0,          // No reflectance
+        uv_transform: bevy::math::Affine2::from_scale(Vec2::new(4.0, 4.0)),
         ..default()
     });
     commands.spawn((
@@ -56,30 +57,29 @@ fn setup_system(
 
     // PICO-8 palette colors
     let pico8_colors = [
-        Color::srgb(0.0, 0.0, 0.0),          // Black
-        Color::srgb(0.11, 0.17, 0.33),       // Dark blue
-        Color::srgb(0.49, 0.15, 0.35),       // Dark purple
-        Color::srgb(0.0, 0.53, 0.33),        // Dark green
-        Color::srgb(0.67, 0.32, 0.21),       // Brown
-        Color::srgb(0.37, 0.35, 0.31),       // Dark gray
-        Color::srgb(0.76, 0.76, 0.78),       // Light gray
-        Color::srgb(1.0, 0.95, 0.91),        // White
-        Color::srgb(1.0, 0.0, 0.3),          // Red
-        Color::srgb(1.0, 0.64, 0.0),         // Orange
-        Color::srgb(1.0, 0.95, 0.27),        // Yellow
-        Color::srgb(0.0, 0.89, 0.21),        // Green
-        Color::srgb(0.16, 0.67, 1.0),        // Blue
-        Color::srgb(0.51, 0.46, 0.61),       // Indigo
-        Color::srgb(1.0, 0.47, 0.77),        // Pink
-        Color::srgb(1.0, 0.8, 0.67),         // Peach
+        Color::srgb(0.0, 0.0, 0.0),    // Black
+        Color::srgb(0.11, 0.17, 0.33), // Dark blue
+        Color::srgb(0.49, 0.15, 0.35), // Dark purple
+        Color::srgb(0.0, 0.53, 0.33),  // Dark green
+        Color::srgb(0.67, 0.32, 0.21), // Brown
+        Color::srgb(0.37, 0.35, 0.31), // Dark gray
+        Color::srgb(0.76, 0.76, 0.78), // Light gray
+        Color::srgb(1.0, 0.95, 0.91),  // White
+        Color::srgb(1.0, 0.0, 0.3),    // Red
+        Color::srgb(1.0, 0.64, 0.0),   // Orange
+        Color::srgb(1.0, 0.95, 0.27),  // Yellow
+        Color::srgb(0.0, 0.89, 0.21),  // Green
+        Color::srgb(0.16, 0.67, 1.0),  // Blue
+        Color::srgb(0.51, 0.46, 0.61), // Indigo
+        Color::srgb(1.0, 0.47, 0.77),  // Pink
+        Color::srgb(1.0, 0.8, 0.67),   // Peach
     ];
 
     // Load map from data/map.txt
-    let map_content = std::fs::read_to_string("data/map.txt")
-        .expect("Failed to read data/map.txt");
-    
+    let map_content = std::fs::read_to_string("data/map.txt").expect("Failed to read data/map.txt");
+
     let mut rng = rand::rng();
-    
+
     // Parse the map and create cubes for each 'X'
     for (row, line) in map_content.lines().enumerate() {
         for (col, ch) in line.chars().enumerate() {
@@ -88,10 +88,10 @@ fn setup_system(
                 let x = col as f32 * 8.0;
                 let y = row as f32 * 8.0;
                 let z = 4.0; // Place cubes at z=4 (half height above ground)
-                
+
                 // Pick a random PICO-8 color
                 let color = pico8_colors[rng.random_range(0..pico8_colors.len())];
-                
+
                 commands.spawn((
                     Mesh3d(cube_mesh.clone()),
                     MeshMaterial3d(materials.add(color)),
@@ -101,21 +101,32 @@ fn setup_system(
         }
     }
 
-    // Light (offset by 256 in X and Y)
     commands.spawn((
         DirectionalLight {
             color: Color::WHITE,
             illuminance: 10000.0,
             shadows_enabled: true,
+            shadow_depth_bias: 0.02,
+            shadow_normal_bias: 0.6,
             ..default()
         },
+        bevy::light::CascadeShadowConfigBuilder {
+            maximum_distance: 1000.0,
+            first_cascade_far_bound: 50.0,
+            ..Default::default()
+        }
+        .build(),
         Transform::from_xyz(260.0, 264.0, 4.0).looking_at(Vec3::new(256.0, 256.0, 0.0), Vec3::Y),
     ));
+    commands.insert_resource(bevy::light::AmbientLight {
+        color: Color::WHITE,
+        brightness: 300.0,
+        affects_lightmapped_meshes: false,
+    });
 
-    // Camera with player controller (offset by 256 in X and Y)
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(256.0, 206.0, 20.0).looking_at(Vec3::new(306.0, 306.0, 4.0), Vec3::Z),
+        Transform::from_xyz(256.0, 206.0, 6.4).looking_at(Vec3::new(-2092.0, 344.0, 6.4), Vec3::Z),
         Player {
             speed: 50.0,
             rot_speed: 1.5,
@@ -260,8 +271,14 @@ fn create_checker_texture(width: u32, height: u32) -> Image {
         RenderAssetUsages::default(),
     );
 
-    // Set nearest filtering for pixelated look
-    image.sampler = bevy::image::ImageSampler::nearest();
+    // Set nearest filtering with repeat mode for tiling
+    image.sampler = bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
+        address_mode_u: bevy::image::ImageAddressMode::Repeat,
+        address_mode_v: bevy::image::ImageAddressMode::Repeat,
+        mag_filter: bevy::image::ImageFilterMode::Nearest,
+        min_filter: bevy::image::ImageFilterMode::Nearest,
+        ..Default::default()
+    });
 
     image
 }
