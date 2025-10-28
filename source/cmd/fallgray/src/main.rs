@@ -433,28 +433,34 @@ fn camera_control_system(
     for (mut transform, player) in query.iter_mut() {
         let dt = time.delta_secs();
 
-        // Movement input (WASD + QE)
-        // WASD moves in the XY plane, Q/E moves along Z axis
+        // Check if modifier keys are pressed
+        let ctrl_pressed =
+            input.pressed(KeyCode::ControlLeft) || input.pressed(KeyCode::ControlRight);
+
+        // Movement input (WASD + RF)
+        // WASD moves in the XY plane, RF moves along Z axis
         let mut movement_xy = Vec2::ZERO; // Movement in XY plane
         let mut movement_z = 0.0; // Movement along Z axis
 
-        if input.pressed(KeyCode::KeyW) {
-            movement_xy.y += 1.0; // Forward
-        }
-        if input.pressed(KeyCode::KeyS) {
-            movement_xy.y -= 1.0; // Backward
-        }
-        if input.pressed(KeyCode::KeyA) {
-            movement_xy.x -= 1.0; // Left
-        }
-        if input.pressed(KeyCode::KeyD) {
-            movement_xy.x += 1.0; // Right
-        }
-        if input.pressed(KeyCode::KeyF) {
-            movement_z -= 1.0; // Down
-        }
-        if input.pressed(KeyCode::KeyR) {
-            movement_z += 1.0; // Up
+        if !ctrl_pressed {
+            if input.pressed(KeyCode::KeyW) {
+                movement_xy.y += 1.0;
+            }
+            if input.pressed(KeyCode::KeyS) {
+                movement_xy.y -= 1.0;
+            }
+            if input.pressed(KeyCode::KeyA) {
+                movement_xy.x -= 1.0;
+            }
+            if input.pressed(KeyCode::KeyD) {
+                movement_xy.x += 1.0;
+            }
+            if input.pressed(KeyCode::KeyF) {
+                movement_z -= 1.0;
+            }
+            if input.pressed(KeyCode::KeyR) {
+                movement_z += 1.0;
+            }
         }
 
         // Rotation input (Arrow keys)
@@ -665,7 +671,7 @@ fn spawn_billboard_sprite(
         base_color_texture: Some(load_image_texture(asset_server, sprite_path)),
         base_color: Color::WHITE,
         alpha_mode: bevy::render::alpha::AlphaMode::Blend,
-        unlit: true,
+        unlit: false,
         cull_mode: None,
         ..default()
     });
@@ -724,7 +730,7 @@ fn spawn_apple_sprite(
         )),
         base_color: Color::WHITE,
         alpha_mode: bevy::render::alpha::AlphaMode::Blend,
-        unlit: true,
+        unlit: false,
         cull_mode: None,
         ..default()
     });

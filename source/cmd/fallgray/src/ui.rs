@@ -159,8 +159,28 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 });
         });
 
-    // Load apple sprite for toolbar placeholder
-    let apple_image = asset_server.load("base/sprites/apple-0001.png");
+    // Toolbar icons
+    let toolbar_icons = [
+        "torch",
+        "sword",
+        "bow",
+        "chest",
+        "key",
+        "map",
+        "book",
+        "diamond",
+        "camp",
+        "question",
+        "flag_green",
+        "bowl",
+        "feather",
+        "shovel",
+        "axe",
+        "glove",
+        "letter",
+        "foot",
+        "heart",
+    ];
 
     // Toolbar at the bottom center
     commands
@@ -194,6 +214,11 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                             Color::srgb(0.4, 0.4, 0.4)
                         };
 
+                        // Get icon for this slot (wrap if index exceeds array length)
+                        let icon_name = toolbar_icons[i % toolbar_icons.len()];
+                        let icon_path = format!("base/icons/{}.png", icon_name);
+                        let icon_image = asset_server.load(icon_path);
+
                         parent
                             .spawn((
                                 Node {
@@ -213,9 +238,9 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 ToolbarSlot { slot_index: i },
                             ))
                             .with_children(|parent| {
-                                // Placeholder apple icon
+                                // Icon for this slot
                                 parent.spawn((
-                                    ImageNode::new(apple_image.clone()),
+                                    ImageNode::new(icon_image),
                                     Node {
                                         width: Val::Px(48.0),
                                         height: Val::Px(48.0),
