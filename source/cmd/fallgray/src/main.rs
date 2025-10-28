@@ -1,8 +1,56 @@
 use bevy::prelude::*;
 use rand::Rng;
+use std::collections::HashMap;
 use std::f32::consts::FRAC_PI_2;
 
 const PLAYER_LIGHT_OFFSET: f32 = 4.0;
+const PLAYER_RADIUS: f32 = 8.0 * 0.2;
+
+#[derive(Resource)]
+struct CollisionMap {
+    grid: HashMap<(i32, i32), bool>,
+    width: usize,
+    height: usize,
+}
+
+impl CollisionMap {
+    fn is_solid(&self, grid_x: i32, grid_y: i32) -> bool {
+        // Check bounds first
+        if grid_x < 0 || grid_y < 0 || grid_x >= self.width as i32 || grid_y >= self.height as i32 {
+            return true; // Treat out of bounds as solid
+        }
+        // If not in map, treat as empty (false)
+        *self.grid.get(&(grid_x, grid_y)).unwrap_or(&false)
+    }
+
+    fn can_move_to(&self, world_x: f32, world_y: f32, radius: f32) -> bool {
+        // Treat player as a 2D bounding box with width and height of 2 * radius
+        let half_size = radius;
+        let min_x = world_x - half_size;
+        let max_x = world_x + half_size;
+        let min_y = world_y - half_size;
+        let max_y = world_y + half_size;
+
+        // Calculate grid cell range that the bounding box overlaps
+        // Check all cells that any part of the box could touch
+        let min_grid_x = (min_x / 8.0).floor() as i32;
+        let max_grid_x = (max_x / 8.0).floor() as i32;
+        let min_grid_y = (min_y / 8.0).floor() as i32;
+        let max_grid_y = (max_y / 8.0).floor() as i32;
+
+        // Check if any of the cells the bounding box overlaps is solid
+        for grid_y in min_grid_y..=max_grid_y {
+            for grid_x in min_grid_x..=max_grid_x {
+                let solid = self.is_solid(grid_x, grid_y);
+                if solid {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
 
 fn main() {
     // Get asset path from REPO_ROOT environment variable
@@ -116,14 +164,14 @@ fn setup_system(
         Cuboid::new(8.0, 8.0, 8.0)
             .mesh()
             .build()
-            .translated_by(Vec3::new(0.0, 0.0, 4.0)),
+            .translated_by(Vec3::new(4.0, 4.0, 4.0)),
     );
 
     let cube_mesh2 = meshes.add(
         Cuboid::new(8.0, 8.0, 16.0)
             .mesh()
             .build()
-            .translated_by(Vec3::new(0.0, 0.0, 8.0)),
+            .translated_by(Vec3::new(4.0, 4.0, 8.0)),
     );
 
     // PICO-8 palette colors
@@ -151,9 +199,22 @@ fn setup_system(
 
     let mut rng = rand::rng();
 
+    // Build collision map
+    let lines: Vec<&str> = map_content.lines().collect();
+    let height = lines.len();
+    let width = lines.iter().map(|l| l.len()).max().unwrap_or(0);
+
+    let mut collision_grid = HashMap::new();
+
     // Parse the map and create cubes for each 'X'
-    for (row, line) in map_content.lines().enumerate() {
+    for (row, line) in lines.iter().enumerate() {
         for (col, ch) in line.chars().enumerate() {
+            // Mark filled cells in collision grid
+            let is_solid = matches!(ch, 'X' | 'x');
+            if is_solid {
+                collision_grid.insert((col as i32, row as i32), true);
+            }
+
             let mesh = match ch {
                 'X' => cube_mesh2.clone(),
                 'x' => cube_mesh.clone(),
@@ -175,18 +236,27 @@ fn setup_system(
         }
     }
 
+    // Insert collision map as a resource
+    commands.insert_resource(CollisionMap {
+        grid: collision_grid,
+        width,
+        height,
+    });
+
     commands.insert_resource(bevy::light::AmbientLight {
         color: Color::WHITE,
         brightness: 1.0,
         affects_lightmapped_meshes: false,
     });
 
-    let player_start_pos = Vec3::new(256.0, 206.0, 6.4);
+    let player_start_pos = Vec3::new(256.0 + 4.0, 200.0 + 4.0, 6.4);
 
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(player_start_pos.x, player_start_pos.y, player_start_pos.z)
-            .looking_at(Vec3::new(-2092.0, 344.0, 6.4), Vec3::Z),
+        Transform::from_xyz(player_start_pos.x, player_start_pos.y, player_start_pos.z).looking_at(
+            Vec3::new(player_start_pos.x - 1.0, player_start_pos.y, 6.4),
+            Vec3::Z,
+        ),
         Player {
             speed: 50.0,
             rot_speed: 1.5,
@@ -215,6 +285,7 @@ fn setup_system(
 fn camera_control_system(
     time: Res<Time>,
     input: Res<ButtonInput<KeyCode>>,
+    collision_map: Res<CollisionMap>,
     mut query: Query<(&mut Transform, &Player)>,
 ) {
     for (mut transform, player) in query.iter_mut() {
@@ -304,11 +375,19 @@ fn camera_control_system(
             let right_xy = Vec2::new(right_3d.x, right_3d.y).normalize_or_zero();
 
             let move_vec_xy = forward_xy * movement_xy.y + right_xy * movement_xy.x;
-            transform.translation.x += move_vec_xy.x * player.speed * dt;
-            transform.translation.y += move_vec_xy.y * player.speed * dt;
+
+            // Calculate new position
+            let new_x = transform.translation.x + move_vec_xy.x * player.speed * dt;
+            let new_y = transform.translation.y + move_vec_xy.y * player.speed * dt;
+
+            // Check collision before moving
+            if collision_map.can_move_to(new_x, new_y, PLAYER_RADIUS) {
+                transform.translation.x = new_x;
+                transform.translation.y = new_y;
+            }
         }
 
-        // Apply Z axis movement
+        // Apply Z axis movement (no collision check for vertical movement)
         if movement_z != 0.0 {
             transform.translation.z += movement_z * player.speed * dt;
         }
