@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use rand::Rng;
 use std::collections::HashMap;
-use std::f32::consts::{E, FRAC_PI_2};
+use std::f32::consts::FRAC_PI_2;
 
 const PLAYER_LIGHT_OFFSET_1: [f32; 3] = [0.0, 1.5, 4.0];
 const PLAYER_LIGHT_OFFSET_2: [f32; 3] = [0.5, -0.5, 4.0];
@@ -148,7 +148,7 @@ impl Default for LightColorAnimation {
 }
 
 fn load_image_texture<T: Into<String>>(asset_server: &Res<AssetServer>, path: T) -> Handle<Image> {
-    let texture_handle = asset_server.load_with_settings(
+    asset_server.load_with_settings(
         path.into(),
         |settings: &mut bevy::image::ImageLoaderSettings| {
             settings.sampler =
@@ -160,33 +160,17 @@ fn load_image_texture<T: Into<String>>(asset_server: &Res<AssetServer>, path: T)
                     ..Default::default()
                 });
         },
-    );
-
-    texture_handle
+    )
 }
 
 fn setup_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
     asset_server: Res<AssetServer>,
 ) {
-    // Create a checker pattern texture
-    let checker_image = create_checker_texture(512, 512);
-    let checker_texture = images.add(checker_image);
-
     // Create a 512x512 plane in the XY plane at z=0
     let plane_mesh = meshes.add(Plane3d::default().mesh().size(512.0, 512.0));
-    let plane_material = materials.add(StandardMaterial {
-        base_color_texture: Some(checker_texture),
-        base_color: Color::WHITE,
-        perceptual_roughness: 1.0,
-        metallic: 0.0,
-        reflectance: 0.0,
-        uv_transform: bevy::math::Affine2::from_scale(Vec2::new(4.0, 4.0)),
-        ..default()
-    });
     let plane_material2 = materials.add(StandardMaterial {
         base_color_texture: Some(load_image_texture(
             &asset_server,
@@ -534,17 +518,17 @@ fn update_ui(
     mut gold_query: Query<&mut Text, With<GoldText>>,
 ) {
     // Update health bar width
-    if let Ok(mut node) = health_query.single_mut().into() {
+    if let Ok(mut node) = health_query.single_mut() {
         node.width = Val::Percent(stats.health);
     }
 
     // Update fatigue bar width
-    if let Ok(mut node) = fatigue_query.single_mut().into() {
+    if let Ok(mut node) = fatigue_query.single_mut() {
         node.width = Val::Percent(stats.fatigue);
     }
 
     // Update gold text
-    if let Ok(mut text) = gold_query.single_mut().into() {
+    if let Ok(mut text) = gold_query.single_mut() {
         **text = format!("Gold: {}", stats.gold);
     }
 }
@@ -575,7 +559,7 @@ fn update_billboards(
     camera_query: Query<&Transform, With<Camera3d>>,
     mut billboard_query: Query<&mut Transform, (With<Billboard>, Without<Camera3d>)>,
 ) {
-    if let Ok(camera_transform) = camera_query.single().into() {
+    if let Ok(camera_transform) = camera_query.single() {
         let camera_pos = camera_transform.translation;
 
         for mut billboard_transform in billboard_query.iter_mut() {
@@ -664,7 +648,7 @@ fn camera_control_system(
             let forward_xy = Vec2::new(forward_3d.x, forward_3d.y);
             let yaw = forward_xy.y.atan2(forward_xy.x);
 
-            let snap_increment = (std::f32::consts::PI / 4.0);
+            let snap_increment = std::f32::consts::PI / 4.0;
             let mut yaw_snap = (yaw / snap_increment).round() * snap_increment;
 
             if yaw_delta < 0.0 && yaw_snap > yaw {
@@ -737,6 +721,7 @@ fn camera_control_system(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn update_player_light(
     player_query: Query<&Transform, With<Player>>,
     mut light_query: Query<&mut Transform, (With<PlayerLight>, Without<Player>)>,
@@ -822,50 +807,4 @@ fn animate_player_light(
             anim.speed = 1.0 + rng.random_range(-0.2..0.2);
         }
     }
-}
-
-fn create_checker_texture(width: u32, height: u32) -> Image {
-    use bevy::asset::RenderAssetUsages;
-    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-
-    let mut data = Vec::with_capacity((width * height * 4) as usize);
-
-    for y in 0..height {
-        for x in 0..width {
-            // Create checkerboard pattern (8x8 pixel squares)
-            let checker_size = 4;
-            let is_white = ((x / checker_size) + (y / checker_size)) % 2 == 0;
-
-            let color = if is_white {
-                [220, 220, 220, 255] // Light gray
-            } else {
-                [80, 80, 80, 255] // Dark gray
-            };
-
-            data.extend_from_slice(&color);
-        }
-    }
-
-    let mut image = Image::new(
-        Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::default(),
-    );
-
-    // Set nearest filtering with repeat mode for tiling
-    image.sampler = bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
-        address_mode_u: bevy::image::ImageAddressMode::Repeat,
-        address_mode_v: bevy::image::ImageAddressMode::Repeat,
-        mag_filter: bevy::image::ImageFilterMode::Nearest,
-        min_filter: bevy::image::ImageFilterMode::Nearest,
-        ..Default::default()
-    });
-
-    image
 }

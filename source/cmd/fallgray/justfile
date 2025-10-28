@@ -1,4 +1,3 @@
-
 ensure:
 
 
@@ -12,7 +11,8 @@ run: ensure
 
 test:
 
-lint: 
+lint: build
+    cargo clippy --fix --allow-dirty --allow-staged
 
 clean:
 
