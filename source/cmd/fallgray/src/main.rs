@@ -125,6 +125,7 @@ fn main() {
                 update_billboards,
                 spawn_apple_on_click,
                 save_map_on_input,
+                check_apple_collision,
             ),
         )
         .run();
@@ -146,7 +147,9 @@ struct PlayerLight2;
 struct Billboard;
 
 #[derive(Component)]
-struct Apple;
+struct Apple {
+    interaction_radius: f32,
+}
 
 #[derive(Component)]
 struct GroundPlane;
@@ -762,7 +765,9 @@ fn spawn_apple_sprite(
         MeshMaterial3d(sprite_material),
         Transform::from_translation(position),
         Billboard,
-        Apple,
+        Apple {
+            interaction_radius: 2.0,
+        },
     ));
 }
 
@@ -904,6 +909,47 @@ fn save_map_on_input(input: Res<ButtonInput<KeyCode>>, apple_tracker: Res<AppleT
                 "Map saved successfully with {} apples!",
                 apple_tracker.world_positions.len()
             );
+        }
+    }
+}
+
+fn check_apple_collision(
+    mut commands: Commands,
+    player_query: Query<&Transform, With<Player>>,
+    apple_query: Query<(Entity, &Transform, &Apple)>,
+    mut stats: ResMut<PlayerStats>,
+    mut apple_tracker: ResMut<AppleTracker>,
+) {
+    let Ok(player_transform) = player_query.single() else {
+        return;
+    };
+
+    let player_pos = player_transform.translation;
+
+    for (entity, apple_transform, apple) in apple_query.iter() {
+        let apple_pos = apple_transform.translation;
+
+        // Calculate distance in XY plane
+        let dx = player_pos.x - apple_pos.x;
+        let dy = player_pos.y - apple_pos.y;
+        let distance = (dx * dx + dy * dy).sqrt();
+
+        if distance <= apple.interaction_radius {
+            // Increase fatigue by 10
+            stats.fatigue = (stats.fatigue + 10.0).min(100.0);
+
+            // Remove apple from world
+            commands.entity(entity).despawn();
+
+            // Remove from tracker
+            let grid_x = (apple_pos.x / 8.0).floor() as i32;
+            let grid_y = (apple_pos.y / 8.0).floor() as i32;
+            apple_tracker.positions.remove(&(grid_x, grid_y));
+            apple_tracker
+                .world_positions
+                .retain(|(x, y)| (*x - apple_pos.x).abs() > 0.1 || (*y - apple_pos.y).abs() > 0.1);
+
+            println!("Collected apple! Fatigue: {}", stats.fatigue);
         }
     }
 }

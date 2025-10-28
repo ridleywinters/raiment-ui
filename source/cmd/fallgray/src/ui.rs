@@ -65,11 +65,14 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         .with_children(|parent| {
             // Container for status bars
             parent
-                .spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(2.0),
-                    ..default()
-                })
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        row_gap: Val::Px(2.0),
+                        ..default()
+                    },
+                    Interaction::default(),
+                ))
                 .with_children(|parent| {
                     // Health bar with its own background
                     parent

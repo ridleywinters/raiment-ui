@@ -64,11 +64,9 @@ map:
   - X                                                              X
   - XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   apples:
-  - x: 236.0
-    y: 204.0
-  - x: 236.0
-    y: 212.0
-  - x: 244.0
-    y: 212.0
-  - x: 244.0
-    y: 204.0
+  - x: -788.0
+    y: 444.0
+  - x: 196.0
+    y: 124.0
+  - x: 68.0
+    y: 108.0
