@@ -23,12 +23,11 @@ export async function validateCommitMessage(filename: string) {
     };
 
     if (typeof message !== "string") {
-        console.error("Commit message must be a string");
+        sh.cprintln("[Commit message must be a string](red)");
         Deno.exit(1);
     }
 
     const last = await sh.spawn("git", ["log", "-n", "1", "--pretty=%B"]);
-    console.log("Last commit message:", last);
     const scrub = (s: string) => s.toLocaleLowerCase().replace(/\s/g, "");
     if (scrub(last) === scrub(message)) {
         sh.cprintln("[Commit message is the same as the last commit message](red)");
