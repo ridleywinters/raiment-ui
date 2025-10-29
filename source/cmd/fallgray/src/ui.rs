@@ -281,6 +281,7 @@ pub fn startup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                     color: outline_color,
                                 },
                                 ToolbarSlot { slot_index: i },
+                                Interaction::default(),
                             ))
                             .with_children(|parent| {
                                 // Icon for this slot
@@ -385,5 +386,21 @@ pub fn update_toolbar_input(
     }
     if input.just_pressed(KeyCode::Digit0) {
         toolbar.active_slot = 9;
+    }
+}
+
+pub fn handle_toolbar_click(
+    mouse_button: Res<ButtonInput<MouseButton>>,
+    mut toolbar: ResMut<Toolbar>,
+    slot_query: Query<(&Interaction, &ToolbarSlot)>,
+) {
+    if !mouse_button.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    for (interaction, slot) in slot_query.iter() {
+        if *interaction == Interaction::Pressed {
+            toolbar.active_slot = slot.slot_index;
+        }
     }
 }

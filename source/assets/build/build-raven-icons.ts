@@ -42,8 +42,8 @@ async function copyFiles(dstDir: string, files: Record<string, string>) {
     sh.mkdir(dstDir);
     for (const [name, file] of Object.entries(files)) {
         const sourcePath = `${SRC_DIR}/${file}`;
-        const outputPath = `${DST_DIR_ICONS}/${name}.png`;
-        const metaOutputPath = `${DST_DIR_ICONS}/${name}.meta.md`;
+        const outputPath = `${dstDir}/${name}.png`;
+        const metaOutputPath = `${dstDir}/${name}.meta.md`;
 
         await sh.copy(sourcePath, outputPath);
         await sh.copy(attributionFile, metaOutputPath);

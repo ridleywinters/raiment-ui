@@ -82,6 +82,7 @@ fn main() {
                 update_player_light_animation,
                 update_ui,
                 update_toolbar_input,
+                handle_toolbar_click,
                 update_billboards,
                 update_spawn_apple_on_click,
                 update_save_map_on_input,
@@ -292,6 +293,7 @@ fn startup_system(
             &asset_server,
             Vec3::new(apple_pos.x, apple_pos.y, scale),
             scale,
+            "base/sprites/apple-01.png",
         );
     }
 
@@ -681,12 +683,10 @@ fn spawn_apple_sprite(
     asset_server: &Res<AssetServer>,
     position: Vec3,
     scale: f32,
+    sprite_path: &str,
 ) {
     let sprite_material = materials.add(StandardMaterial {
-        base_color_texture: Some(load_image_texture(
-            asset_server,
-            "base/sprites/apple-01.png",
-        )),
+        base_color_texture: Some(load_image_texture(asset_server, sprite_path)),
         base_color: Color::WHITE,
         alpha_mode: bevy::render::alpha::AlphaMode::Blend,
         unlit: false,
@@ -738,6 +738,7 @@ fn update_spawn_apple_on_click(
     ground_query: Query<&GlobalTransform, With<GroundPlane>>,
     ui_interaction_query: Query<&Interaction>,
     mut apple_tracker: ResMut<AppleTracker>,
+    toolbar: Res<Toolbar>,
 ) {
     if !mouse_button.just_pressed(MouseButton::Left) {
         return;
@@ -808,6 +809,13 @@ fn update_spawn_apple_on_click(
     apple_tracker.positions.insert((grid_x, grid_y));
     apple_tracker.world_positions.push((world_x, world_y));
 
+    // Select sprite based on active toolbar slot
+    let sprite_path = match toolbar.active_slot {
+        0 => "base/sprites/apple-01.png",
+        1 => "base/sprites/coin-gold.png",
+        _ => "base/sprites/apple-01.png",
+    };
+
     // Spawn apple billboard at the intersection point
     let scale = 1.2;
     spawn_apple_sprite(
@@ -817,6 +825,7 @@ fn update_spawn_apple_on_click(
         &asset_server,
         Vec3::new(world_x, world_y, scale),
         scale,
+        sprite_path,
     );
 }
 
