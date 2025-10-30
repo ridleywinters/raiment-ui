@@ -2,12 +2,14 @@ import { copy } from "./copy.ts";
 import { cprintln } from "./cprintln.ts";
 import { exec } from "./exec.ts";
 import { expandEnvVars } from "./expand_env_vars.ts";
+import { fetchExists } from "./fetch_exists.ts";
+import { fetchText } from "./fetch_text.ts";
 import { glob } from "./glob.ts";
 import { mkdir } from "./mkdir.ts";
 import { read } from "./read.ts";
-import { write } from "./write.ts";
 import { spawn } from "./spawn.ts";
 import { template } from "./template.ts";
+import { write } from "./write.ts";
 
 export const sh = {
     // String utilities
@@ -28,4 +30,8 @@ export const sh = {
     glob,
     copy,
     read,
+
+    // Network
+    fetchText,
+    fetchExists,
 };

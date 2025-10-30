@@ -2,11 +2,14 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/cli@1.0.6": "1.0.6",
+    "jsr:@std/fmt@^1.0.8": "1.0.8",
     "jsr:@std/fs@1.0.19": "1.0.19",
     "jsr:@std/internal@^1.0.10": "1.0.12",
     "jsr:@std/internal@^1.0.9": "1.0.12",
+    "jsr:@std/path@*": "1.1.2",
     "jsr:@std/path@1.0.8": "1.0.8",
     "jsr:@std/path@^1.1.1": "1.1.2",
+    "jsr:@std/yaml@^1.0.10": "1.0.10",
     "npm:@types/node@*": "24.2.0",
     "npm:fastest-levenshtein@1.0.16": "1.0.16",
     "npm:sharp@0.33.5": "0.33.5"
@@ -14,6 +17,9 @@
   "jsr": {
     "@std/cli@1.0.6": {
       "integrity": "d22d8b38c66c666d7ad1f2a66c5b122da1704f985d3c47f01129f05abb6c5d3d"
+    },
+    "@std/fmt@1.0.8": {
+      "integrity": "71e1fc498787e4434d213647a6e43e794af4fd393ef8f52062246e06f7e372b7"
     },
     "@std/fs@1.0.19": {
       "integrity": "051968c2b1eae4d2ea9f79a08a3845740ef6af10356aff43d3e2ef11ed09fb06",
@@ -33,6 +39,9 @@
       "dependencies": [
         "jsr:@std/internal@^1.0.10"
       ]
+    },
+    "@std/yaml@1.0.10": {
+      "integrity": "245706ea3511cc50c8c6d00339c23ea2ffa27bd2c7ea5445338f8feff31fa58e"
     }
   },
   "npm": {
@@ -251,8 +260,10 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/cli@1.0.6",
+      "jsr:@std/fmt@^1.0.8",
       "jsr:@std/fs@1.0.19",
       "jsr:@std/path@1.0.8",
+      "jsr:@std/yaml@^1.0.10",
       "npm:sharp@0.33.5"
     ]
   }

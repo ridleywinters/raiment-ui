@@ -1,0 +1,4 @@
+import "../../common/common.justfile"
+
+ensure:
+    @just ensure-vscode-directory

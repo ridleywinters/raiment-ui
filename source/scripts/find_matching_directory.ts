@@ -103,13 +103,27 @@ function findClosestMatch(
         // Compare only the final directory name, not the full path
         const comparisonString = candidate.split("/").pop()?.toLowerCase() ?? "";
 
-        let score = levenshtein(
-            queryLower,
-            comparisonString.slice(0, queryLower.length),
-        );
-        if (comparisonString.startsWith(queryLower)) {
-            score -= 2; // Heavy bias for prefix matches
+        let score = Infinity;
+
+        // Find minimum score across all substrings of queryLower.length
+        // or against the entire string if shorter than queryLower.
+        for (let i = 0; i <= comparisonString.length - queryLower.length; i++) {
+            const substring = comparisonString.slice(i, i + queryLower.length);
+            const substringScore = levenshtein(queryLower, substring);
+            score = Math.min(score, substringScore);
         }
+        if (comparisonString.length < queryLower.length) {
+            score = levenshtein(queryLower, comparisonString);
+        }
+
+        // Heavy bias for prefix/suffix matches
+        if (
+            comparisonString.startsWith(queryLower) ||
+            comparisonString.endsWith(queryLower)
+        ) {
+            score -= 2;
+        }
+
         // Bonus for prefix match at word boundaries
         const words = comparisonString.split(/[-_]/);
         for (const word of words) {

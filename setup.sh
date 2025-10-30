@@ -53,8 +53,8 @@ if [ ! -f "$CARGO_HOME/bin/rustup" ]; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -sSf | RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y
 fi
 
-_prepend_to_path "$CARGO_HOME/bin"
 _prepend_to_path "$REPO_ROOT/bin"
+_prepend_to_path "$CARGO_HOME/bin"
 unset -f _prepend_to_path
 
 #==============================================================================
@@ -80,6 +80,11 @@ fi
 if [ ! -f "$CARGO_HOME/bin/watchexec" ]; then
     cargo binstall -y watchexec-cli
     echo 
+fi
+if [ ! -f "$REPO_ROOT/bin/apps/blender" ]; then
+    ./source/scripts/download-blender.ts "$REPO_ROOT/bin/apps"
+    ln -s "$REPO_ROOT/bin/apps/blender" "$REPO_ROOT/bin/blender"
+    echo
 fi
 
 #==============================================================================
@@ -123,6 +128,7 @@ _show_command_info "deno"
 _show_command_info "just"
 _show_command_info "mprocs"
 _show_command_info "watchexec"
+_show_command_info "blender"
 echo
 
 unset -f _show_command_info

@@ -29,3 +29,7 @@ publish:
 clean:
     git clean -fdx
     find . -type d -empty -delete
+
+[private]
+clean-bin:
+    cd bin && git clean -fdx
