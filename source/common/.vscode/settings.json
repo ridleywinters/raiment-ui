@@ -35,5 +35,9 @@
 
     // Make the adornments smaller and the editor the focus
     "window.zoomLevel": 0.75,
-    "editor.fontSize": 15
+    "editor.fontSize": 15,
+
+    "workbench.colorCustomizations": {
+        "editor.background": "#171717"
+    }
 }
