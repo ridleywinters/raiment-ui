@@ -1,0 +1,7 @@
+import "../../common/common.justfile"
+
+ensure:
+    @just ensure-vscode-directory
+
+test: ensure
+    deno test --allow-read src/

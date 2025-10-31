@@ -18,9 +18,9 @@ build: ensure
     cd source/cmd/snowfall && just build
 
 # Tests all projects
-test:
-    echo "TODO"
-
+test: build
+    cd source/modules/raiment-core && just test
+       
 # Publishes all projects 
 publish:
     echo "TODO"
