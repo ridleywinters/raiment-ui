@@ -13,6 +13,7 @@ export async function validateCommitMessage(filename: string) {
         perf: "a code change that improves performance",
         test: "add or improve tests",
         build: "changes to the build or deployment system",
+        proto: "prototype or experimental code",
         misc: "escape hatch for anything that does not fit into the above",
     };
     const printValidTypes = () => {
