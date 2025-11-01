@@ -1,4 +1,5 @@
 mod collision;
+mod texture_loader;
 mod ui;
 
 use bevy::prelude::*;
@@ -7,6 +8,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::FRAC_PI_2;
+use texture_loader::{load_image_texture, load_weapon_texture};
 use ui::*;
 
 #[derive(Serialize, Deserialize)]
@@ -111,6 +113,7 @@ fn main() {
                 update_camera_control_system,
                 update_player_light,
                 update_player_light_animation,
+                update_weapon_swing,
                 update_ui,
                 update_toolbar_input,
                 update_toolbar_click,
@@ -151,6 +154,50 @@ struct LightColorAnimation {
     speed: f32,
 }
 
+// Weapon swing components
+#[derive(Component)]
+struct WeaponSprite {
+    swing_timer: Timer,
+    is_swinging: bool,
+}
+
+impl Default for WeaponSprite {
+    fn default() -> Self {
+        Self {
+            swing_timer: Timer::from_seconds(0.4, TimerMode::Once),
+            is_swinging: false,
+        }
+    }
+}
+
+// ===== WEAPON ANIMATION CONSTANTS =====
+
+// Animation timing phases
+const WINDUP_END: f32 = 0.15; // 15% - Wind-up phase
+const SWING_END: f32 = 0.50; // 50% - Thrust/swing phase (35% duration)
+const FOLLOWTHROUGH_END: f32 = 1.0; // 100% - Follow-through phase (50% duration)
+
+// Rest position (idle state)
+const REST_POS_X: f32 = 0.6; // Right side of screen
+const REST_POS_Y: f32 = -0.45; // Lower on screen
+const REST_POS_Z: f32 = -1.2; // Distance from camera
+const REST_ROTATION_Z: f32 = 0.0; // No spin at rest
+const REST_ROTATION_Y: f32 = 0.0; // No tilt at rest
+
+// Wind-up position
+const WINDUP_POS_X: f32 = 0.7; // Slightly more right
+const WINDUP_POS_Y: f32 = -0.35; // Slightly higher
+const WINDUP_POS_Z: f32 = -0.8; // Pull back toward camera
+const WINDUP_ROTATION_Z: f32 = -0.5; // Counter-clockwise wind-up
+const WINDUP_ROTATION_Y: f32 = 0.8; // Tilt right
+
+// Thrust end position
+const THRUST_POS_X: f32 = 0.3; // Move toward center
+const THRUST_POS_Y: f32 = -0.45; // Slightly higher than rest
+const THRUST_POS_Z: f32 = -1.5; // Extend forward
+const THRUST_ROTATION_Z: f32 = 1.55; // Large clockwise spin (~89°)
+const THRUST_ROTATION_Y: f32 = -1.3; // Tilt left (~-74°)
+
 impl Default for LightColorAnimation {
     fn default() -> Self {
         Self {
@@ -160,20 +207,17 @@ impl Default for LightColorAnimation {
     }
 }
 
-fn load_image_texture<T: Into<String>>(asset_server: &Res<AssetServer>, path: T) -> Handle<Image> {
-    asset_server.load_with_settings(
-        path.into(),
-        |settings: &mut bevy::image::ImageLoaderSettings| {
-            settings.sampler =
-                bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
-                    address_mode_u: bevy::image::ImageAddressMode::Repeat,
-                    address_mode_v: bevy::image::ImageAddressMode::Repeat,
-                    mag_filter: bevy::image::ImageFilterMode::Nearest,
-                    min_filter: bevy::image::ImageFilterMode::Nearest,
-                    ..Default::default()
-                });
-        },
-    )
+// Easing functions for weapon swing
+fn ease_out_quad(t: f32) -> f32 {
+    1.0 - (1.0 - t) * (1.0 - t)
+}
+
+fn ease_in_out_cubic(t: f32) -> f32 {
+    if t < 0.5 {
+        4.0 * t * t * t
+    } else {
+        1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+    }
 }
 
 fn startup_system(
@@ -359,21 +403,33 @@ fn startup_system(
 
     let player_start_pos = Vec3::new(256.0 + 4.0, 200.0 + 4.0, 4.8);
 
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(player_start_pos.x, player_start_pos.y, player_start_pos.z).looking_at(
-            Vec3::new(
-                player_start_pos.x - 1.0,
-                player_start_pos.y,
-                player_start_pos.z * 1.01,
-            ),
-            Vec3::Z,
-        ),
-        Player {
-            speed: 32.0,
-            rot_speed: 2.75,
-        },
-    ));
+    let camera_entity = commands
+        .spawn((
+            Camera3d::default(),
+            Transform::from_xyz(player_start_pos.x, player_start_pos.y, player_start_pos.z)
+                .looking_at(
+                    Vec3::new(
+                        player_start_pos.x - 1.0,
+                        player_start_pos.y,
+                        player_start_pos.z * 1.01,
+                    ),
+                    Vec3::Z,
+                ),
+            Player {
+                speed: 32.0,
+                rot_speed: 2.75,
+            },
+        ))
+        .id();
+
+    // Spawn weapon sprite as child of camera for first-person view
+    spawn_weapon_sprite(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &asset_server,
+        camera_entity,
+    );
 
     // Add a point light that follows the player
     commands.spawn((
@@ -656,6 +712,100 @@ fn update_player_light_animation(
     }
 }
 
+fn update_weapon_swing(
+    time: Res<Time>,
+    mouse_button: Res<ButtonInput<MouseButton>>,
+    toolbar: Res<Toolbar>,
+    mut weapon_query: Query<(&mut Transform, &mut WeaponSprite, &mut Visibility)>,
+    ui_interaction_query: Query<&Interaction>,
+) {
+    for (mut transform, mut weapon, mut visibility) in weapon_query.iter_mut() {
+        // Only show the weapon sprite when slot 1 is active
+        *visibility = if toolbar.active_slot == 1 {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+
+        // Check for attack input (left mouse button) - only swing if slot 1 is active
+        if mouse_button.just_pressed(MouseButton::Left)
+            && !weapon.is_swinging
+            && toolbar.active_slot == 1
+        {
+            // Check if any UI element is being interacted with
+            let ui_blocked = ui_interaction_query
+                .iter()
+                .any(|interaction| *interaction != Interaction::None);
+            if !ui_blocked {
+                weapon.is_swinging = true;
+                weapon.swing_timer.reset();
+            }
+        }
+
+        if weapon.is_swinging {
+            weapon.swing_timer.tick(time.delta());
+            let progress = weapon.swing_timer.fraction();
+
+            let rest_pos = Vec3::new(REST_POS_X, REST_POS_Y, REST_POS_Z);
+            let rest_rotation_z = REST_ROTATION_Z;
+            let rest_rotation_y = REST_ROTATION_Y;
+
+            // Calculate current position and rotation based on phase
+            let (current_pos, current_rotation_z, current_rotation_y) = if progress < WINDUP_END {
+                // Wind-up phase: pull back toward camera
+                let phase_t = progress / WINDUP_END;
+                let eased_t = ease_out_quad(phase_t);
+
+                let windup_pos = Vec3::new(WINDUP_POS_X, WINDUP_POS_Y, WINDUP_POS_Z);
+
+                (
+                    rest_pos.lerp(windup_pos, eased_t),
+                    REST_ROTATION_Z + (WINDUP_ROTATION_Z - REST_ROTATION_Z) * eased_t,
+                    REST_ROTATION_Y + (WINDUP_ROTATION_Y - REST_ROTATION_Y) * eased_t,
+                )
+            } else if progress < SWING_END {
+                // Thrust phase: fast FORWARD motion with rotation
+                let phase_t = (progress - WINDUP_END) / (SWING_END - WINDUP_END);
+                let eased_t = ease_in_out_cubic(phase_t);
+
+                let windup_pos = Vec3::new(WINDUP_POS_X, WINDUP_POS_Y, WINDUP_POS_Z);
+                let thrust_end_pos = Vec3::new(THRUST_POS_X, THRUST_POS_Y, THRUST_POS_Z);
+
+                (
+                    windup_pos.lerp(thrust_end_pos, eased_t),
+                    WINDUP_ROTATION_Z + (THRUST_ROTATION_Z - WINDUP_ROTATION_Z) * eased_t,
+                    WINDUP_ROTATION_Y + (THRUST_ROTATION_Y - WINDUP_ROTATION_Y) * eased_t,
+                )
+            } else {
+                // Follow-through phase: deceleration back to rest
+                let phase_t = (progress - SWING_END) / (FOLLOWTHROUGH_END - SWING_END);
+                let eased_t = ease_out_quad(phase_t);
+
+                let thrust_end_pos = Vec3::new(THRUST_POS_X, THRUST_POS_Y, THRUST_POS_Z);
+
+                (
+                    thrust_end_pos.lerp(rest_pos, eased_t),
+                    THRUST_ROTATION_Z + (REST_ROTATION_Z - THRUST_ROTATION_Z) * eased_t,
+                    THRUST_ROTATION_Y + (REST_ROTATION_Y - THRUST_ROTATION_Y) * eased_t,
+                )
+            };
+
+            // Apply transforms - combine Z rotation and Y rotation (tilt)
+            transform.translation = current_pos;
+            transform.rotation = Quat::from_rotation_z(current_rotation_z)
+                * Quat::from_rotation_y(current_rotation_y);
+
+            // Check if animation is complete
+            if weapon.swing_timer.is_finished() {
+                weapon.is_swinging = false;
+                transform.translation = rest_pos;
+                transform.rotation =
+                    Quat::from_rotation_z(rest_rotation_z) * Quat::from_rotation_y(rest_rotation_y);
+            }
+        }
+    }
+}
+
 fn spawn_billboard_sprite(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -711,6 +861,69 @@ fn spawn_billboard_sprite(
         Transform::from_translation(position),
         Billboard,
     ));
+}
+
+fn spawn_weapon_sprite(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    asset_server: &Res<AssetServer>,
+    camera_entity: Entity,
+) {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::mesh::{Indices, PrimitiveTopology};
+
+    let sprite_material = materials.add(StandardMaterial {
+        base_color_texture: Some(load_weapon_texture(asset_server, "base/icons/sword.png")),
+        base_color: Color::WHITE,
+        alpha_mode: bevy::render::alpha::AlphaMode::Blend,
+        unlit: true, // Keep weapon bright and visible
+        cull_mode: None,
+        ..default()
+    });
+
+    let scale = 0.5; // Smaller scale for weapon icon
+
+    let mut weapon_mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    );
+
+    // Create a quad for the weapon sprite
+    let positions = vec![
+        [-scale, -scale, 0.0], // bottom-left
+        [scale, -scale, 0.0],  // bottom-right
+        [scale, scale, 0.0],   // top-right
+        [-scale, scale, 0.0],  // top-left
+    ];
+    weapon_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    weapon_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 4]);
+
+    let uvs = vec![
+        [0.0, 1.0], // bottom-left
+        [1.0, 1.0], // bottom-right
+        [1.0, 0.0], // top-right
+        [0.0, 0.0], // top-left
+    ];
+    weapon_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+    weapon_mesh.insert_indices(Indices::U32(vec![0, 1, 2, 0, 2, 3]));
+
+    // Spawn weapon as child of camera
+    // Position it to the right and lower on screen
+    // Close to camera to ensure it renders on top
+    let weapon_entity = commands
+        .spawn((
+            Mesh3d(meshes.add(weapon_mesh)),
+            MeshMaterial3d(sprite_material),
+            Transform::from_xyz(REST_POS_X, REST_POS_Y, REST_POS_Z), // Use constants to match animation rest position
+            WeaponSprite::default(),
+        ))
+        .id();
+
+    // Parent weapon to camera
+    commands
+        .entity(camera_entity)
+        .add_children(&[weapon_entity]);
 }
 
 fn spawn_item(
@@ -788,6 +1001,11 @@ fn update_spawn_item_on_click(
         return;
     }
 
+    // Only spawn items if slot 2 or 3 is active
+    if toolbar.active_slot != 2 && toolbar.active_slot != 3 {
+        return;
+    }
+
     // Check if any UI element is being interacted with
     for interaction in ui_interaction_query.iter() {
         if *interaction != Interaction::None {
@@ -850,9 +1068,9 @@ fn update_spawn_item_on_click(
 
     // Select item based on active toolbar slot
     let item_key = match toolbar.active_slot {
-        0 => "apple",
-        1 => "coin-gold",
-        _ => "apple",
+        2 => "apple",
+        3 => "coin-gold",
+        _ => "apple", // Fallback (shouldn't happen due to earlier check)
     };
 
     // Track the item

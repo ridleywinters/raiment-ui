@@ -1,3 +1,4 @@
+use crate::texture_loader::load_image_texture;
 use bevy::prelude::*;
 
 #[derive(Resource)]
@@ -19,12 +20,12 @@ impl Default for PlayerStats {
 
 #[derive(Resource)]
 pub struct Toolbar {
-    pub active_slot: usize, // 0-9
+    pub active_slot: usize, // 1-9, 0 for 10th slot
 }
 
 impl Default for Toolbar {
     fn default() -> Self {
-        Self { active_slot: 0 }
+        Self { active_slot: 1 }
     }
 }
 
@@ -89,7 +90,10 @@ pub fn startup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .with_children(|parent| {
                             // Heart icon
                             parent.spawn((
-                                ImageNode::new(asset_server.load("base/icons/heart.png")),
+                                ImageNode::new(load_image_texture(
+                                    &asset_server,
+                                    "base/icons/heart.png",
+                                )),
                                 Node {
                                     width: Val::Px(20.0),
                                     height: Val::Px(20.0),
@@ -141,7 +145,10 @@ pub fn startup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .with_children(|parent| {
                             // Foot icon
                             parent.spawn((
-                                ImageNode::new(asset_server.load("base/icons/foot.png")),
+                                ImageNode::new(load_image_texture(
+                                    &asset_server,
+                                    "base/icons/foot.png",
+                                )),
                                 Node {
                                     width: Val::Px(20.0),
                                     height: Val::Px(20.0),
@@ -206,7 +213,7 @@ pub fn startup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Toolbar icons
     let toolbar_icons = [
         "torch",
-        "sword",
+        "axe",
         "bow",
         "chest",
         "key",
@@ -219,11 +226,11 @@ pub fn startup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         "bowl",
         "feather",
         "shovel",
-        "axe",
         "glove",
         "letter",
         "foot",
         "heart",
+        "sword",
     ];
 
     // Toolbar at the bottom center
@@ -250,9 +257,12 @@ pub fn startup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     Interaction::default(),
                 ))
                 .with_children(|parent| {
-                    // Create 10 toolbar slots (0-9)
+                    // Create 10 toolbar slots (1-9, then 0 for the 10th slot)
                     for i in 0..10 {
-                        let outline_color = if i == 0 {
+                        // Map visual position to slot number: pos 0->slot 1, pos 1->slot 2, ..., pos 9->slot 0
+                        let slot_number = if i == 9 { 0 } else { i + 1 };
+
+                        let outline_color = if slot_number == 1 {
                             Color::WHITE
                         } else {
                             Color::srgb(0.4, 0.4, 0.4)
@@ -261,7 +271,7 @@ pub fn startup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         // Get icon for this slot (wrap if index exceeds array length)
                         let icon_name = toolbar_icons[i % toolbar_icons.len()];
                         let icon_path = format!("base/icons/{}.png", icon_name);
-                        let icon_image = asset_server.load(icon_path);
+                        let icon_image = load_image_texture(&asset_server, icon_path);
 
                         parent
                             .spawn((
@@ -280,7 +290,9 @@ pub fn startup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                     offset: Val::Px(0.0),
                                     color: outline_color,
                                 },
-                                ToolbarSlot { slot_index: i },
+                                ToolbarSlot {
+                                    slot_index: slot_number,
+                                },
                                 Interaction::default(),
                             ))
                             .with_children(|parent| {
@@ -358,34 +370,34 @@ pub fn update_toolbar_input(
 ) {
     // Toolbar slot selection (1-9, 0 for slot 10)
     if input.just_pressed(KeyCode::Digit1) {
-        toolbar.active_slot = 0;
-    }
-    if input.just_pressed(KeyCode::Digit2) {
         toolbar.active_slot = 1;
     }
-    if input.just_pressed(KeyCode::Digit3) {
+    if input.just_pressed(KeyCode::Digit2) {
         toolbar.active_slot = 2;
     }
-    if input.just_pressed(KeyCode::Digit4) {
+    if input.just_pressed(KeyCode::Digit3) {
         toolbar.active_slot = 3;
     }
-    if input.just_pressed(KeyCode::Digit5) {
+    if input.just_pressed(KeyCode::Digit4) {
         toolbar.active_slot = 4;
     }
-    if input.just_pressed(KeyCode::Digit6) {
+    if input.just_pressed(KeyCode::Digit5) {
         toolbar.active_slot = 5;
     }
-    if input.just_pressed(KeyCode::Digit7) {
+    if input.just_pressed(KeyCode::Digit6) {
         toolbar.active_slot = 6;
     }
-    if input.just_pressed(KeyCode::Digit8) {
+    if input.just_pressed(KeyCode::Digit7) {
         toolbar.active_slot = 7;
     }
-    if input.just_pressed(KeyCode::Digit9) {
+    if input.just_pressed(KeyCode::Digit8) {
         toolbar.active_slot = 8;
     }
-    if input.just_pressed(KeyCode::Digit0) {
+    if input.just_pressed(KeyCode::Digit9) {
         toolbar.active_slot = 9;
+    }
+    if input.just_pressed(KeyCode::Digit0) {
+        toolbar.active_slot = 0;
     }
 }
 
