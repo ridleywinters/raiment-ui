@@ -1,7 +1,23 @@
 import "../../common/common.justfile"
 
+#==============================================================================
+# default
+#==============================================================================
+
+[private]
+default:
+    @just --list --unsorted
+
+#==============================================================================
+# ensure
+#==============================================================================
+
 ensure:
     @just ensure-vscode-directory
+
+#==============================================================================
+# build
+#==============================================================================
 
 build: ensure build-only
 
@@ -17,15 +33,9 @@ build-only:
       src/main.tsx
     date > dist/build.timestamp
 
-dev-client:
-    watchexec \
-        --watch src \
-        --watch "${REPO_ROOT}/source/modules/raiment-core/src" \
-        --watch "${REPO_ROOT}/source/modules/raiment-ui/src" \
-        --exts ts,tsx,html,css,png,yaml,json \
-        "just build-only && sleep 1"
-dev-server: run-server
-
+#==============================================================================
+# dev
+#==============================================================================
 
 dev: ensure
     mprocs \
@@ -34,6 +44,32 @@ dev: ensure
         "just dev-client" \
         "just dev-server"
 
+dev-client:
+    watchexec \
+        --watch src \
+        --watch "${REPO_ROOT}/source/modules/raiment-core/src" \
+        --watch "${REPO_ROOT}/source/modules/raiment-ui/src" \
+        --exts ts,tsx,html,css,png,yaml,json \
+        "just build-only && sleep 1"
+
+
+# Unfortunately can't just call "just dev" in the server directory
+# as that requires changing the working directory, but we want the
+# working to remain relative to this project.
+
+# Starts the development server with live reloading
+dev-server:
+    watchexec \
+        --restart \
+        --watch "${REPO_ROOT}/source/tools/raiment-dev-server/src" \
+        --watch "${REPO_ROOT}/source/modules/raiment-core/src" \
+        --watch "${REPO_ROOT}/source/modules/raiment-ui/src" \
+        --exts ts,tsx,html,css,png,yaml,json \
+        "just run-server"
+
+#==============================================================================
+# run
+#==============================================================================
 
 run-server:
-    deno run -A ./src/server/main.ts
+    deno run -A "${REPO_ROOT}/source/tools/raiment-dev-server/main.ts"

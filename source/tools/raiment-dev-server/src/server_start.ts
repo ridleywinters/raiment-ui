@@ -67,8 +67,3 @@ export async function serverStart(options: ServerOptions) {
         },
     });
 }
-
-serverStart({
-    title: "Development server",
-    port: 8080,
-});

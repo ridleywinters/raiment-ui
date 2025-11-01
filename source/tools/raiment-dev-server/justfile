@@ -1,0 +1,17 @@
+import "../../common/common.justfile"
+
+ensure:
+    @just ensure-vscode-directory
+
+build: ensure
+
+dev: build
+    watchexec \
+        --watch src \
+        --watch "${REPO_ROOT}/source/modules/raiment-core/src" \
+        --watch "${REPO_ROOT}/source/modules/raiment-shell/src" \
+        --exts ts,tsx,html,css,png,yaml,json \
+        "just run"
+
+run:
+    deno run -A ./main.ts

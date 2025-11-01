@@ -56,7 +56,7 @@ function AppView2(): JSX.Element {
     return (
         <div style={{ margin: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <h1>Palette Editor</h1>
+                <h1>Palette Editor v0.1</h1>
                 <button
                     type="button"
                     onClick={exportGPL}
