@@ -78,7 +78,7 @@ run-foreach root_dir command:
                 echo "Error: No justfile found in $(basename "$dir")"
                 exit 1
             fi
-            echo "--- Running 'just {{command}}' in $dir ---"
+            printf '\033[38;5;214m{{command}} %s\033[0m\n' "$dir"
             (cd "$dir" && just "{{command}}")
         fi
     done
