@@ -1,4 +1,4 @@
-import { normalize } from "@std/path";
+import { normalize } from "https://deno.land/std@0.208.0/path/mod.ts";
 
 export async function copy(source: string, destination: string): Promise<void> {
     source = normalize(source);

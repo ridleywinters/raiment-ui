@@ -4,6 +4,20 @@ import { invokeDownload, useLocalStorage } from "@raiment-ui";
 import React, { JSX } from "react";
 
 export function AppView(): JSX.Element {
+    React.useEffect(() => {
+        const go = async () => {
+            const resp = await fetch("/palette.gpl");
+            const gplContent = await resp.text();
+            const colors = core.parseGIMPPalette(gplContent);
+            console.log(colors);
+        };
+        go();
+    }, []);
+
+    return <AppView2 />;
+}
+
+function AppView2(): JSX.Element {
     const rowCount = 20;
     const [allRowColors, setAllRowColors] = React.useState<string[][]>([]);
     const [rowOrder, setRowOrder] = React.useState<number[]>(() =>

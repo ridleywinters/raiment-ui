@@ -15,12 +15,13 @@ build-only:
       --sourcemap=inline \
       --output dist/main.bundle.js \
       src/main.tsx
-    sleep 1
-    touch dist/build.sentinel
+    date > dist/build.timestamp
 
 dev-client:
     watchexec \
         --watch src \
+        --watch "${REPO_ROOT}/source/modules/raiment-core/src" \
+        --watch "${REPO_ROOT}/source/modules/raiment-ui/src" \
         --exts ts,tsx,html,css,png,yaml,json \
         "just build-only && sleep 1"
 dev-server: run-server
@@ -35,6 +36,4 @@ dev: ensure
 
 
 run-server:
-    deno run -A jsr:@bbcwqx/live-server \
-        --port=9000 \
-        ./dist 
+    deno run -A ./src/server/main.ts

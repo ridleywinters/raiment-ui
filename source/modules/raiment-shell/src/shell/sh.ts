@@ -1,5 +1,5 @@
+import { cprintln } from "../term/cprintln.ts";
 import { copy } from "./copy.ts";
-import { cprintln } from "./cprintln.ts";
 import { exec } from "./exec.ts";
 import { expandEnvVars } from "./expand_env_vars.ts";
 import { fetchExists } from "./fetch_exists.ts";

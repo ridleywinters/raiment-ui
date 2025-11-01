@@ -2,6 +2,7 @@ export * from "./base/type_of_value.ts";
 export * from "./collections/assign_deep.ts";
 export * from "./colors/named_colors.ts";
 export * from "./colors/parse_hex_color.ts";
+export * from "./colors/semantic_colors.ts";
 export * from "./colors/types.ts";
 export * from "./data/crc32.ts";
 export * from "./formats/parse_gimp_palette.ts";

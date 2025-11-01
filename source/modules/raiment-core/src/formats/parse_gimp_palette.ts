@@ -15,7 +15,7 @@ export function parseGIMPPalette(content: string): ColorHexString[] | null {
             "Invalid GIMP Palette file: must start with 'GIMP Palette'",
         );
     }
-    lines.unshift();
+    lines.shift();
 
     for (const line of lines) {
         const trimmed = line.trim();
@@ -25,6 +25,7 @@ export function parseGIMPPalette(content: string): ColorHexString[] | null {
 
         const parts = trimmed.split(/\s+/);
         if (parts.length < 3) {
+            console.warn("Invalid color line (not enough components):", line);
             return null;
         }
         const r = Math.min(Math.max(parseInt(parts[0], 10), 0), 255);

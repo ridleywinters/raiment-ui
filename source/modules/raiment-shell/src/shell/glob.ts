@@ -1,4 +1,4 @@
-import { expandGlob } from "@std/fs/expand-glob";
+import { expandGlob } from "https://deno.land/std@0.208.0/fs/expand_glob.ts";
 import { expandEnvVars } from "./expand_env_vars.ts";
 
 export async function glob(pattern: string): Promise<string[]> {
