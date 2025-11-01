@@ -72,4 +72,6 @@ dev-server:
 #==============================================================================
 
 run-server:
-    deno run -A "${REPO_ROOT}/source/tools/raiment-dev-server/main.ts"
+    deno run -A "${REPO_ROOT}/source/tools/raiment-dev-server/main.ts" \
+        --port 7050 \
+        --title "palette-editor"

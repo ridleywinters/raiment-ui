@@ -4,7 +4,7 @@ import { handleStaticFiles } from "./handle_static_files.ts";
 import { handleStatus } from "./handle_status.ts";
 import { runFilePollingLoop } from "./run_file_polling_loop.ts";
 
-type ServerOptions = {
+export type ServerOptions = {
     title: string;
     port: number;
 };
@@ -13,15 +13,31 @@ type HandlerPattern =
     | string
     | RegExp;
 
+async function checkPortAvailable(port: number): Promise<boolean> {
+    try {
+        const listener = Deno.listen({ port });
+        listener.close();
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export async function serverStart(options: ServerOptions) {
+    const isPortAvailable = await checkPortAvailable(options.port);
+    if (!isPortAvailable) {
+        cprintln(`[error](error): port [${options.port}](number) is already in use.`);
+        Deno.exit(1);
+    }
+
     const clients = new SSEClientSet();
 
-    runFilePollingLoop("./dist/build.timestamp", ({ current, previous }) => {
+    runFilePollingLoop("./dist/build.timestamp", ({ filename, current, previous }) => {
         cprintln(
-            "info",
+            "#555",
             [
-                `Detected build timestamp change: ${previous} → ${current}.`,
-                `Broadcasting reload event.`,
+                `File modification [${filename}](filename)`,
+                `Broadcasting [app.reload](string)`,
             ].join("\n"),
         );
         clients.broadcast({ type: "app.reload" });

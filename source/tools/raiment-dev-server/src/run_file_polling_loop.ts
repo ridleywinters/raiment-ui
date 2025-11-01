@@ -1,6 +1,10 @@
 export function runFilePollingLoop(
     filename: string,
-    callback: (opts: { current: number | undefined; previous: number | undefined }) => void,
+    callback: (opts: {
+        filename: string;
+        current: number | undefined;
+        previous: number | undefined;
+    }) => void,
 ) {
     const status = {
         timestamp: undefined as number | undefined,
@@ -20,7 +24,7 @@ export function runFilePollingLoop(
         }
         const previous = status.timestamp;
         status.timestamp = current;
-        callback({ current, previous });
+        callback({ filename, current, previous });
     };
     const pollLoop = async () => {
         await pollFile(filename);
