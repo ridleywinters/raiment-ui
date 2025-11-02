@@ -241,7 +241,7 @@ pub fn update_ui(
 // Also handles toolbar slot selection (keys 1-9 and 0)
 pub fn update_toolbar_input(
     input: Res<ButtonInput<KeyCode>>,
-    mut stats: ResMut<PlayerStats>,
+    stats: ResMut<PlayerStats>,
     mut toolbar: ResMut<Toolbar>,
     console_state: Res<ConsoleState>,
 ) {

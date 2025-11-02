@@ -168,8 +168,8 @@ pub fn update_console_input(
     }
 
     // Handle Up arrow - navigate to previous command in history
-    if input.just_pressed(KeyCode::ArrowUp) {
-        if !console_state.command_history.is_empty() {
+    if input.just_pressed(KeyCode::ArrowUp)
+        && !console_state.command_history.is_empty() {
             let new_index = match console_state.history_index {
                 None => Some(console_state.command_history.len() - 1),
                 Some(idx) if idx > 0 => Some(idx - 1),
@@ -182,11 +182,10 @@ pub fn update_console_input(
                 console_state.cursor_position = console_state.input_text.chars().count();
             }
         }
-    }
 
     // Handle Down arrow - navigate to next command in history
-    if input.just_pressed(KeyCode::ArrowDown) {
-        if let Some(idx) = console_state.history_index {
+    if input.just_pressed(KeyCode::ArrowDown)
+        && let Some(idx) = console_state.history_index {
             if idx < console_state.command_history.len() - 1 {
                 console_state.history_index = Some(idx + 1);
                 console_state.input_text = console_state.command_history[idx + 1].clone();
@@ -198,14 +197,12 @@ pub fn update_console_input(
                 console_state.cursor_position = 0;
             }
         }
-    }
 
     // Handle Left arrow - move cursor left
-    if input.just_pressed(KeyCode::ArrowLeft) || should_handle_arrow_left {
-        if console_state.cursor_position > 0 {
+    if (input.just_pressed(KeyCode::ArrowLeft) || should_handle_arrow_left)
+        && console_state.cursor_position > 0 {
             console_state.cursor_position -= 1;
         }
-    }
 
     // Handle Right arrow - move cursor right
     if input.just_pressed(KeyCode::ArrowRight) || should_handle_arrow_right {
@@ -230,7 +227,7 @@ pub fn update_console_input(
         let words: Vec<&str> = console_state.input_text.split_whitespace().collect();
 
         // Check if first word is setvar or getvar
-        if words.len() >= 1 && (words[0] == "setvar" || words[0] == "getvar") {
+        if !words.is_empty() && (words[0] == "setvar" || words[0] == "getvar") {
             // Check if there's a second word (partial variable name)
             if words.len() >= 2 && !words[1].is_empty() {
                 let current_word = words[1];
@@ -296,8 +293,8 @@ pub fn update_console_input(
     }
 
     // Handle Enter key - submit command
-    if input.just_pressed(KeyCode::Enter) {
-        if !console_state.input_text.is_empty() {
+    if input.just_pressed(KeyCode::Enter)
+        && !console_state.input_text.is_empty() {
             // Echo the command to history
             let command = console_state.input_text.clone();
             console_state.log.push(format!(": {}", command));
@@ -326,11 +323,10 @@ pub fn update_console_input(
             console_state.input_text.clear();
             console_state.cursor_position = 0;
         }
-    }
 
     // Handle Backspace - delete character before cursor
-    if input.just_pressed(KeyCode::Backspace) || should_handle_backspace {
-        if console_state.cursor_position > 0 {
+    if (input.just_pressed(KeyCode::Backspace) || should_handle_backspace)
+        && console_state.cursor_position > 0 {
             let char_indices: Vec<_> = console_state.input_text.char_indices().collect();
             if console_state.cursor_position <= char_indices.len() {
                 let byte_pos = char_indices[console_state.cursor_position - 1].0;
@@ -339,7 +335,6 @@ pub fn update_console_input(
                 console_state.history_index = None;
             }
         }
-    }
 
     // Handle Delete - delete character at cursor
     if input.just_pressed(KeyCode::Delete) || should_handle_delete {
@@ -366,8 +361,8 @@ pub fn update_console_input(
 
     // Handle character input
     for event in char_events.read() {
-        if event.state.is_pressed() {
-            if let bevy::input::keyboard::Key::Character(ref s) = event.logical_key {
+        if event.state.is_pressed()
+            && let bevy::input::keyboard::Key::Character(ref s) = event.logical_key {
                 // Ignore backtick to prevent it being added when opening console
                 // Also ignore space since we handle it explicitly above
                 if s.as_str() != "`" && s.as_str() != "~" && s.as_str() != " " {
@@ -382,7 +377,6 @@ pub fn update_console_input(
                     console_state.history_index = None;
                 }
             }
-        }
     }
 
     // Update input text display with cursor

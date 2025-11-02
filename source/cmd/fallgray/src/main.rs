@@ -60,19 +60,12 @@ fn default_item_type() -> String {
 }
 
 #[derive(Resource)]
+#[derive(Default)]
 struct ItemTracker {
     positions: HashSet<(i32, i32)>, // Grid positions where items exist
     world_positions: Vec<(f32, f32, String)>, // Actual world positions and item types for saving
 }
 
-impl Default for ItemTracker {
-    fn default() -> Self {
-        Self {
-            positions: HashSet::new(),
-            world_positions: Vec::new(),
-        }
-    }
-}
 
 impl ItemTracker {
     fn remove_at_position(&mut self, world_x: f32, world_y: f32) {
@@ -296,9 +289,9 @@ fn startup_system(
         .map(|repo_root| format!("{}/source/assets/base/items/items.yaml", repo_root))
         .unwrap_or_else(|_| "data/item_definitions.yaml".to_string());
     let item_defs_yaml =
-        std::fs::read_to_string(&filename).expect(&format!("Failed to read {}", filename));
+        std::fs::read_to_string(&filename).unwrap_or_else(|_| panic!("Failed to read {}", filename));
     let item_defs_file: ItemDefinitionsFile =
-        serde_yaml::from_str(&item_defs_yaml).expect(&format!("Failed to parse {}", filename));
+        serde_yaml::from_str(&item_defs_yaml).unwrap_or_else(|_| panic!("Failed to parse {}", filename));
     let item_definitions = ItemDefinitions {
         items: item_defs_file.items,
     };
@@ -387,10 +380,8 @@ fn startup_system(
         let item_def = item_definitions
             .items
             .get(&item_pos.item_type)
-            .expect(&format!(
-                "Item definition not found: {}",
-                item_pos.item_type
-            ));
+            .unwrap_or_else(|| panic!("Item definition not found: {}",
+                item_pos.item_type));
         let scale = item_def.scale;
 
         // Spawn the item billboard
