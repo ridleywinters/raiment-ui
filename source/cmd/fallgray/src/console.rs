@@ -50,31 +50,20 @@ pub struct ConsoleHistoryScroll;
 #[derive(Component)]
 pub struct ConsoleInputText;
 
-fn spawn_with<'a>(e: &'a mut EntityCommands<'a>, styles: Vec<&str>) -> &'a mut EntityCommands<'a> {
-    node_style(e, styles.join(" ").as_str());
-    e
+pub trait EntityCommandsExt {
+    fn styles(self, styles: Vec<&str>) -> Self;
+    fn text(self, content: &str) -> Self;
 }
 
-fn styled_root_with<F>(spawner: &mut Commands, styles: Vec<&str>, callback: F)
-where
-    F: FnOnce(&mut EntityCommands),
-{
-    let mut entity_commands = spawner.spawn_empty();
-    node_style(&mut entity_commands, styles.join(" ").as_str());
-    callback(&mut entity_commands);
-}
-
-fn styled_child_with<'w, R, F>(
-    spawner: &mut RelatedSpawnerCommands<'w, R>,
-    styles: Vec<&str>,
-    callback: F,
-) where
-    R: Relationship + 'static,
-    F: FnOnce(&mut EntityCommands),
-{
-    let mut entity_commands = spawner.spawn_empty();
-    node_style(&mut entity_commands, styles.join(" ").as_str());
-    callback(&mut entity_commands);
+impl<'a> EntityCommandsExt for EntityCommands<'a> {
+    fn styles(mut self, styles: Vec<&str>) -> Self {
+        node_style(&mut self, styles.join(" ").as_str());
+        self
+    }
+    fn text(mut self, content: &str) -> Self {
+        self.insert(Text::new(content));
+        self
+    }
 }
 
 pub fn startup_console(mut commands: Commands) {
@@ -82,80 +71,58 @@ pub fn startup_console(mut commands: Commands) {
     commands.insert_resource(ConsoleState::default());
 
     // Console overlay (initially hidden)
-    styled_root_with(
-        &mut commands,
-        vec![
-            "width-100% height-50% absolute top0 left0 flex-col p8 display-none",
+    commands
+        .spawn(ConsoleContainer)
+        .styles(vec![
+            "display-none",
+            "width-100% height-50% absolute top0 left0 flex-col p8",
             "z1000",
             "bg-srgba-(0.0,0.0,0.0,0.925)",
-        ],
-        |root| {
-            root.insert(ConsoleContainer).with_children(|parent| {
-                // Scrollable history area container
-                styled_child_with(
-                    parent,
-                    vec!["flex-col grow1 scroll-y", "bg-rgba(0.1,0.1,0.1,0.3)"],
-                    |parent| {
-                        parent.insert(ConsoleHistoryScroll).with_children(|parent| {
-                            // History text
-                            parent.spawn((
-                                Text::new(""),
-                                TextFont {
-                                    font_size: 16.0,
-                                    ..default()
-                                },
-                                TextColor(Color::srgb(0.8, 0.8, 0.6)),
-                                Node {
-                                    padding: UiRect::all(Val::Px(8.0)),
-                                    ..default()
-                                },
-                                ConsoleHistoryText,
-                            ));
-                        });
-                    },
-                );
-
-                // Input prompt
-                spawn_with(
-                    &mut parent.spawn_empty(), //
-                    vec!["flex-row-center gap8 mt8"],
-                )
+        ])
+        .with_children(|parent| {
+            parent
+                .spawn(ConsoleHistoryScroll)
+                .styles(vec![
+                    "flex-col grow1 scroll-y", //
+                    "bg-rgba(0.1,0.1,0.1,0.3)",
+                ])
                 .with_children(|parent| {
-                    // Prompt symbol
-                    parent.spawn((
-                        Text::new("> "),
-                        TextFont {
-                            font_size: 16.0,
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
-                    ));
-
-                    // Input text
-                    parent.spawn((
-                        Text::new(""),
-                        TextFont {
-                            font_size: 16.0,
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
-                        ConsoleInputText,
-                    ));
+                    parent // History text
+                        .spawn(ConsoleHistoryText)
+                        .text("")
+                        .styles(vec![
+                            "p8 font-size-16", //
+                            "fg-srgba-(0.8,0.8,0.6,1.0)",
+                        ]);
                 });
-            });
-        },
-    );
+            parent // Input prompt
+                .spawn_empty()
+                .styles(vec!["flex-row-center gap8 mt8"])
+                .with_children(|parent| {
+                    parent
+                        .spawn_empty()
+                        .text("> ")
+                        .styles(vec!["fg-white font-size-16"]);
+                    parent
+                        .spawn(ConsoleInputText)
+                        .text("")
+                        .styles(vec!["fg-white font-size-16"]);
+                });
+        });
 }
 
 struct StyledBundle {
     node: Node,
     z_index: Option<ZIndex>,
     background_color: Option<BackgroundColor>,
+    text_font: Option<TextFont>,
+    text_color: Option<TextColor>,
 }
 
 enum StyleHandler {
     Void(fn(&mut StyledBundle)),
     I32(fn(&mut StyledBundle, i32)),
+    F32(fn(&mut StyledBundle, f32)),
     F32F32F32F32(fn(&mut StyledBundle, f32, f32, f32, f32)),
 }
 
@@ -341,13 +308,35 @@ static COMPILED_PATTERNS: LazyLock<Vec<(Regex, StyleHandler)>> = LazyLock::new(|
             I32(|b, v| b.node.padding = UiRect::all(Val::Px(v as f32))),
         ),
         //
-        // Backgrounds
+        // Color
         //
         (
             r"bg-srgba-\(([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+)\)",
             F32F32F32F32(|bundle, r, g, b, a| {
                 let color = Color::srgba(r, g, b, a);
                 bundle.background_color = Some(BackgroundColor(color));
+            }),
+        ),
+        (
+            r"fg-white",
+            Void(|b| {
+                b.text_color = Some(TextColor(Color::WHITE));
+            }),
+        ),
+        (
+            r"fg-srgba-\(([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+)\)",
+            F32F32F32F32(|bundle, r, g, b, a| {
+                let color = Color::srgba(r, g, b, a);
+                bundle.text_color = Some(TextColor(color));
+            }),
+        ),
+        //
+        // Typography
+        //
+        (
+            r"font-size-([\d.]+)",
+            F32(|b, v| {
+                b.text_font.get_or_insert_with(TextFont::default).font_size = v;
             }),
         ),
     ];
@@ -370,6 +359,8 @@ fn node_style(commands: &mut EntityCommands, sl: &str) {
         node: Node { ..default() },
         z_index: None,
         background_color: None,
+        text_font: None,
+        text_color: None,
     };
 
     let tokens: Vec<&str> = sl.split_whitespace().collect();
@@ -399,7 +390,18 @@ fn node_style(commands: &mut EntityCommands, sl: &str) {
                         break;
                     }
                     let Ok(value) = captures[1].parse::<i32>() else {
-                        log::warn!("Invalid number in div style: {}", token);
+                        log::warn!("Invalid number in style: {}", token);
+                        break;
+                    };
+                    func(&mut bundle, value);
+                }
+                F32(func) => {
+                    if captures.len() != 2 {
+                        log::warn!("No capture group for F32 style: {}", token);
+                        break;
+                    }
+                    let Ok(value) = captures[1].parse::<f32>() else {
+                        log::warn!("Invalid float in style: {}", token);
                         break;
                     };
                     func(&mut bundle, value);
@@ -413,19 +415,19 @@ fn node_style(commands: &mut EntityCommands, sl: &str) {
                         break;
                     }
                     let Ok(v1) = captures[1].parse::<f32>() else {
-                        log::warn!("Invalid first float in div style: {}", token);
+                        log::warn!("Invalid first float in style: {}", token);
                         break;
                     };
                     let Ok(v2) = captures[2].parse::<f32>() else {
-                        log::warn!("Invalid second float in div style: {}", token);
+                        log::warn!("Invalid second float in style: {}", token);
                         break;
                     };
                     let Ok(v3) = captures[3].parse::<f32>() else {
-                        log::warn!("Invalid third float in div style: {}", token);
+                        log::warn!("Invalid third float in style: {}", token);
                         break;
                     };
                     let Ok(v4) = captures[4].parse::<f32>() else {
-                        log::warn!("Invalid fourth float in div style: {}", token);
+                        log::warn!("Invalid fourth float in style: {}", token);
                         break;
                     };
                     func(&mut bundle, v1, v2, v3, v4);
@@ -433,7 +435,7 @@ fn node_style(commands: &mut EntityCommands, sl: &str) {
             }
         }
         if !matched {
-            log::warn!("Unknown div style: {}", token);
+            log::warn!("Unknown style: {}", token);
         }
     }
 
@@ -443,6 +445,12 @@ fn node_style(commands: &mut EntityCommands, sl: &str) {
     }
     if let Some(background_color) = bundle.background_color {
         commands.insert(background_color);
+    }
+    if let Some(text_font) = bundle.text_font {
+        commands.insert(text_font);
+    }
+    if let Some(text_color) = bundle.text_color {
+        commands.insert(text_color);
     }
 }
 
