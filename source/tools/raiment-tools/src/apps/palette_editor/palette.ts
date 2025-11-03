@@ -1,5 +1,5 @@
 import { ColorHexString, EventEmitter } from "@raiment-core";
-import { hexToHSL, hslToHex } from "../util/util.ts";
+import { hexToHSL, hslToHex } from "../../util/util.ts";
 
 export class Palette {
     events = new EventEmitter<{ "update": [] }>();

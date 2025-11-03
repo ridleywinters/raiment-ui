@@ -2,10 +2,10 @@ import * as core from "@raiment-core";
 import { type ColorHexString } from "@raiment-core";
 import { Div, invokeDownload, useEventListener } from "@raiment-ui";
 import React, { JSX } from "react";
-import { Palette } from "@/model/palette.ts";
+import { Palette } from "./palette.ts";
 import { serverAPI } from "@/util/server_api.tsx";
 
-export function AppView(): JSX.Element {
+export function PaletteEditorApp(): JSX.Element {
     const [palette, setPalette] = React.useState<Palette | null>(null);
 
     React.useEffect(() => {

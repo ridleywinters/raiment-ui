@@ -1,8 +1,11 @@
+import "../common/common.justfile"
+
 [private]
 default:
     @just --list --unsorted    
 
 ensure:
+    @just ensure-vscode-directory
     mkdir -p ./base/textures
     mkdir -p ./base/sprites
     mkdir -p ./base/icons

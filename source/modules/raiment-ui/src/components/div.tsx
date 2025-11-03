@@ -9,7 +9,7 @@ type EventHandlers = {
 type DivProps =
     & {
         sl?: StyleLanguage;
-        children: React.ReactNode;
+        children?: React.ReactNode;
         className?: string;
         style?: React.CSSProperties;
     }

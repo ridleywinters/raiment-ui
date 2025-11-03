@@ -3,6 +3,8 @@
     // a file or folder.
     "explorer.incrementalNaming": "smart",
 
+    "editor.formatOnSave": true,
+
     "editor.codeActionsOnSave": {
         // While this feature is nice in theory, it has a tendency to
         // rename aliased import paths that defeats the intent of having
@@ -65,6 +67,12 @@
         "editor.defaultFormatter": "denoland.vscode-deno"
     },
     "[javascriptreact]": {
+        "editor.defaultFormatter": "denoland.vscode-deno"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "denoland.vscode-deno"
+    },
+    "[jsonc]": {
         "editor.defaultFormatter": "denoland.vscode-deno"
     }
 }

@@ -41,7 +41,7 @@ build-only:
 
 dev: ensure
     mprocs \
-        --proc-list-title "palette-editor 7050" \
+        --proc-list-title "raiment-tools 7050" \
         --names "client,server" \
         "just dev-client" \
         "just dev-server"

@@ -50,7 +50,7 @@ export async function serverStart(options: ServerOptions) {
         ["/api/events", () => handleServerSideEvents(clients)],
         ["/api/read-file", (req) => handleAPIReadFile(req, { baseDir: "./data" })],
         ["/api/write-file", (req) => handleAPIWriteFile(req, { baseDir: "./data" })],
-        [/.*/, (req) => handleStaticFiles("./dist", req)],
+        [/.*/, (req) => handleStaticFiles("./dist", req, { defaultFile: "index.html" })],
     ];
 
     await Deno.serve({
@@ -73,7 +73,7 @@ export async function serverStart(options: ServerOptions) {
                 ].join("\n"),
             );
         },
-        handler: (req: Request): Promise<Response> => {
+        handler: async (req: Request): Promise<Response> => {
             const url = new URL(req.url);
             const match = handlers.find(([pattern]) => {
                 return typeof pattern === "string"
@@ -81,7 +81,7 @@ export async function serverStart(options: ServerOptions) {
                     : pattern.test(url.pathname);
             });
             if (!match) {
-                return Promise.resolve(new Response("Not Found", { status: 404 }));
+                return new Response("Not Found", { status: 404 });
             }
             const [, handler] = match;
             return handler(req);
