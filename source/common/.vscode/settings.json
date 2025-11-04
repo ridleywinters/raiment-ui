@@ -32,6 +32,10 @@
     // Deno-related
     "deno.enable": true,
 
+    // Prefer aliased imports over relative paths to modules
+    "typescript.preferences.importModuleSpecifier": "shortest",
+    "javascript.preferences.importModuleSpecifier": "shortest",
+
     // Disable the rust-analyzer features that clutter the editor experience
     "rust-analyzer.lens.enable": false,
     "rust-analyzer.inlayHints.typeHints.enable": true,
@@ -44,6 +48,8 @@
     // Chat settings
     "chat.tools.autoApprove": true,
     "chat.agent.maxRequests": 1000,
+    "github.copilot.chat.codeGeneration.model": "claude-sonnet-4.5",
+    "github.copilot.chat.model": "claude-sonnet-4.5",
 
     // Make the adornments smaller and the editor the focus
     "window.zoomLevel": 0.75,

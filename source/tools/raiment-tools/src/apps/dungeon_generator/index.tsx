@@ -1,6 +1,11 @@
 import { JSX } from "react";
-import { AppView } from "./app_view.tsx";
+import { DungeonGeneratorAppView } from "./dungeon_generator_app_view.tsx";
+import { ToolAppFrame } from "@/components/tool_app_frame.tsx";
 
 export function DungeonGeneratorApp(): JSX.Element {
-    return <AppView />;
+    return (
+        <ToolAppFrame>
+            <DungeonGeneratorAppView />
+        </ToolAppFrame>
+    );
 }

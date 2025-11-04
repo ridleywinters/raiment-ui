@@ -4,6 +4,7 @@ import { Div, invokeDownload, useEventListener } from "@raiment-ui";
 import React, { JSX } from "react";
 import { Palette } from "./palette.ts";
 import { serverAPI } from "@/util/server_api.tsx";
+import { ToolAppFrame } from "@/components/tool_app_frame.tsx";
 
 export function PaletteEditorApp(): JSX.Element {
     const [palette, setPalette] = React.useState<Palette | null>(null);
@@ -18,11 +19,11 @@ export function PaletteEditorApp(): JSX.Element {
         go();
     }, []);
 
-    if (!palette) {
-        return <div>Loading palette...</div>;
-    }
-
-    return <AppView2 palette={palette} />;
+    return (
+        <ToolAppFrame>
+            {!palette ? <Div sl="m32">Loading palette...</Div> : <AppView2 palette={palette} />}
+        </ToolAppFrame>
+    );
 }
 
 function AppView2({ palette }: { palette: Palette }): JSX.Element {

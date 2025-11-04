@@ -25,5 +25,15 @@ export function Div({
 }: DivProps): JSX.Element {
     const slClassName = useStyleLanguage(sl);
     const computedClass = [className, slClassName].filter((c) => c).join(" ") || undefined;
-    return <div className={computedClass} style={style} {...props}>{children}</div>;
+    return (
+        <div
+            // Show the component first (if set) for easier inspection
+            data-component={props["data-component"]}
+            className={computedClass}
+            style={style}
+            {...props}
+        >
+            {children}
+        </div>
+    );
 }

@@ -12,6 +12,9 @@
     --font-headings: "Quintessential", cursive;
     --font-sans: "Noto Sans", sans-serif;
     --font-mono: "Noto Sans Mono", monospace;
+
+    --color-link-foreground: #1c3351;
+    --color-link-hover-foreground: #3b70d3;
 }
 
 .font-title {
@@ -43,5 +46,14 @@ button, input, textarea, select {
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
+}
+
+a {
+    color: var(--color-link-foreground);
+    text-decoration: none;
+
+    &:hover {
+        color: var(--color-link-hover-foreground);
+    }
 }
 

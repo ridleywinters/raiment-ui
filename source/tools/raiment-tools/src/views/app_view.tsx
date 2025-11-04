@@ -3,10 +3,16 @@ import type { JSX } from "react";
 import { PaletteEditorApp } from "@/apps/palette_editor/palette_editor_app.tsx";
 import { DungeonGeneratorApp } from "@/apps/dungeon_generator/index.tsx";
 import { Div } from "@raiment-ui";
+import { useHistoryNavigation } from "@/hooks/use_history_navigation.ts";
+import { ToolAppFrame } from "@/components/tool_app_frame.tsx";
 
-const routes2: [string, string, () => JSX.Element][] = [
-    ["Palette Editor", "palette-editor", () => <PaletteEditorApp />],
-    ["Dungeon Generator", "dungeon-generator", () => <DungeonGeneratorApp />],
+const routes2: [string, string, () => JSX.Element, string[]][] = [
+    ["Palette Editor", "palette-editor", () => <PaletteEditorApp />, [
+        "view/modify the internal color palette for the project",
+    ]],
+    ["Dungeon Generator", "dungeon-generator", () => <DungeonGeneratorApp />, [
+        "work-in-progress procedural dungeon generator",
+    ]],
 ];
 
 export function AppView(): JSX.Element {
@@ -14,9 +20,10 @@ export function AppView(): JSX.Element {
         document.title = "Raiment Tools";
     }, []);
 
-    const pathname = globalThis.location.pathname;
+    const url = useHistoryNavigation();
 
-    for (const [name, path, componentFunc] of routes2) {
+    const pathname = url.pathname;
+    for (const [_name, path, componentFunc] of routes2) {
         if (pathname.startsWith(`/${path}`)) {
             return componentFunc();
         }
@@ -26,37 +33,37 @@ export function AppView(): JSX.Element {
 
 function HomeView(): JSX.Element {
     return (
-        <Div sl="m32">
-            <Div sl="bold mb16">
-                Raiment Tools
-            </Div>
-            <Div sl="flex-col">
-                {routes2.map(([name, path]) => (
-                    <Div key={path} sl="flex-row-center">
-                        <Div sl="mr8">
+        <ToolAppFrame>
+            <Div sl="m32">
+                <Div sl="bold mb16">
+                    Tools
+                </Div>
+                <Div sl="flex-col">
+                    {routes2.map(([name, path, _ignored, description]) => (
+                        <Div key={path} sl="flex-row-center my2">
                             <Div
+                                sl="height-6 width-6 mr8"
                                 style={{
-                                    height: 6,
-                                    width: 6,
                                     borderRadius: "50%",
                                     backgroundColor: "#888",
                                 }}
                             />
+                            <Div sl="width-200">
+                                <a
+                                    href={`/${path}`}
+                                >
+                                    {name}
+                                </a>
+                            </Div>
+                            <Div>
+                                <Div sl="ml32 italic fg-gray-60%">
+                                    {description.join(" ")}
+                                </Div>
+                            </Div>
                         </Div>
-                        <Div>
-                            <a
-                                href={`/${path}`}
-                                style={{
-                                    color: "#007bff",
-                                    textDecoration: "none",
-                                }}
-                            >
-                                {name}
-                            </a>
-                        </Div>
-                    </Div>
-                ))}
+                    ))}
+                </Div>
             </Div>
-        </Div>
+        </ToolAppFrame>
     );
 }

@@ -216,6 +216,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     //-------------------------------------------------------------------------
 
     [
+        /(width|height|min-width|min-height|max-width|max-height)-([0-9]+)%/,
+        (m) => `${m[1]}: ${m[2]}%;`,
+    ],
+    [
         /(width|height|min-width|min-height|max-width|max-height)-([0-9]+)/,
         (m) => `${m[1]}: ${m[2]}px;`,
     ],
@@ -229,6 +233,7 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     //
     // flex-row, flex-col
     // flex-row-center
+    // flex-*-*-*
     // gap-*
     //-------------------------------------------------------------------------
 
@@ -243,6 +248,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     [
         "flex-col",
         () => "display: flex; flex-direction: column;",
+    ],
+    [
+        /flex-([0-9A-Za-z%]+)-([0-9A-Za-z%]+)-([0-9A-Za-z%]+)/,
+        (m) => `flex: ${m[1]} ${m[2]} ${m[3]};`,
     ],
     [
         /gap-([0-9]+)/,
@@ -322,6 +331,11 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
 
     //-------------------------------------------------------------------------
     // Typography
+    //
+    // bold|string
+    // em|italic
+    // font-size-*
+    // line-height-*
     //-------------------------------------------------------------------------
 
     [
@@ -340,6 +354,14 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
         /font-size-([0-9]+)/,
         (m) => `font-size: ${m[1]}px;`,
     ],
+    [
+        /line-height-([0-9]+)%/,
+        (m) => `line-height: ${m[1]}%;`,
+    ],
+    [
+        /line-height-([0-9\.]+)/,
+        (m) => `line-height: ${m[1]};`,
+    ],
 
     //-------------------------------------------------------------------------
     // Cursor
@@ -348,5 +370,26 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     [
         /cursor-(auto|default|pointer|wait|text|move|help|not-allowed)/,
         (m) => `cursor: ${m[1]};`,
+    ],
+
+    //-------------------------------------------------------------------------
+    // Colors
+    //-------------------------------------------------------------------------
+
+    [
+        /fg-(white|black|red|green|blue)/,
+        (m) => `color: ${m[1]};`,
+    ],
+    [
+        /fg-gray-([0-9]+)%?/,
+        (m) => `color: hsl(0, 0%, ${m[1]}%);`,
+    ],
+    [
+        /bg-(white|black|red|green|blue)/,
+        (m) => `background-color: ${m[1]};`,
+    ],
+    [
+        /bg-gray-([0-9]+)%?/,
+        (m) => `background-color: hsl(0, 0%, ${m[1]}%);`,
     ],
 ];

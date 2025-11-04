@@ -541,7 +541,7 @@ async function build() {
     return map;
 }
 
-export function AppView(): JSX.Element {
+export function DungeonGeneratorAppView(): JSX.Element {
     const [map, setMap] = React.useState<DungeonMap | null>(null);
     React.useEffect(() => {
         const buildMap = async () => {
@@ -551,15 +551,10 @@ export function AppView(): JSX.Element {
         buildMap();
     }, []);
 
-    if (!map) {
-        return <div>Generating...</div>;
-    }
-
-    const data = map.data();
-
     return (
-        <div style={{ margin: 16 }}>
-            {data.map((row, i) => (
+        <Div sl="mx32 my8">
+            <Div sl="mb16">Generating{!map ? "..." : ": done."}</Div>
+            {map?.data().map((row, i) => (
                 <Div key={i} sl="flex-row">
                     {row.map((cell, j) => (
                         <Div key={j}>
@@ -568,7 +563,7 @@ export function AppView(): JSX.Element {
                     ))}
                 </Div>
             ))}
-        </div>
+        </Div>
     );
 }
 
