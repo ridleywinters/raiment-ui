@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "nefrob.vscode-just-syntax",
+        "github.copilot",
+        "github.copilot-chat",
+        "denoland.vscode-deno",
+        "1yib.rust-bundle",
+        "esbenp.prettier-vscode"
+    ]
+}

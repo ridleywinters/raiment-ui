@@ -63,7 +63,8 @@
     "[markdown]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.wordWrap": "wordWrapColumn",
-        "editor.wordWrapColumn": 80
+        "editor.wordWrapColumn": 80,
+        "editor.indentSize": 4
     },
     "[typescript]": {
         "editor.defaultFormatter": "denoland.vscode-deno"
