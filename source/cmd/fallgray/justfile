@@ -10,6 +10,9 @@ build: ensure
 dev: ensure
     cargo run --release
 
+dev-build:
+    cargo watch -x 'build --release'
+
 run: ensure lint
     cargo run --release
 

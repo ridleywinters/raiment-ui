@@ -109,7 +109,7 @@ static COMPILED_PATTERNS: LazyLock<Vec<(Regex, StyleHandler)>> = LazyLock::new(|
             }),
         ),
         (
-            r"z(\d)+",
+            r"z(\d+)",
             I32(|b, v| {
                 b.z_index = Some(ZIndex(v));
             }),
@@ -370,6 +370,7 @@ fn node_style(commands: &mut EntityCommands, sl: &str) {
                         log::warn!("No capture group for I32 style: {}", token);
                         break;
                     }
+
                     let Ok(value) = captures[1].parse::<i32>() else {
                         log::warn!("Invalid number in style: {}", token);
                         break;

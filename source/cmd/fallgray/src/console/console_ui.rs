@@ -1,3 +1,4 @@
+use super::ConsoleState;
 use crate::cvars::CVarRegistry;
 use crate::script::process_script;
 use crate::ui::PlayerStats;
@@ -5,72 +6,26 @@ use crate::ui_styles::EntityCommandsUIExt;
 use bevy::prelude::*;
 
 //=============================================================================
-// Console Plugin
+// Console UI Components
 //=============================================================================
 
-pub struct ConsolePlugin;
+#[derive(Component)]
+pub(super) struct ConsoleContainer;
 
-impl Plugin for ConsolePlugin {
-    fn build(&self, app: &mut App) {
-        app //
-            .add_systems(Startup, startup_console)
-            .add_systems(
-                Update,
-                (
-                    update_console_toggle,
-                    update_console_input,
-                    update_console_scroll,
-                ),
-            );
-    }
-}
+#[derive(Component)]
+pub(super) struct ConsoleHistoryText;
+
+#[derive(Component)]
+pub(super) struct ConsoleHistoryScroll;
+
+#[derive(Component)]
+pub(super) struct ConsoleInputText;
 
 //=============================================================================
-// Console State
+// Console UI Systems
 //=============================================================================
 
-#[derive(Resource)]
-pub struct ConsoleState {
-    pub visible: bool,
-    pub input_text: String,
-    pub cursor_position: usize, // Cursor position in the input text (in chars, not bytes)
-    pub log: Vec<String>,
-    pub command_history: Vec<String>, // Stores only commands (not output)
-    pub history_index: Option<usize>, // Current position in command history
-    pub key_repeat_timer: f32,        // Timer for key repeat
-    pub key_repeat_initial_delay: f32, // Initial delay before repeat starts
-    pub key_repeat_rate: f32,         // Time between repeats once started
-}
-
-impl Default for ConsoleState {
-    fn default() -> Self {
-        Self {
-            visible: false,
-            input_text: String::new(),
-            cursor_position: 0,
-            log: Vec::new(),
-            command_history: Vec::new(),
-            history_index: None,
-            key_repeat_timer: 0.0,
-            key_repeat_initial_delay: 0.3, // initial delay (in seconds)
-            key_repeat_rate: 0.015,        // time between repeats (in seconds)
-        }
-    }
-}
-
-#[derive(Component)]
-pub struct ConsoleContainer;
-
-#[derive(Component)]
-pub struct ConsoleHistoryText;
-
-#[derive(Component)]
-pub struct ConsoleHistoryScroll;
-
-#[derive(Component)]
-pub struct ConsoleInputText;
-
-fn startup_console(mut commands: Commands) {
+pub(super) fn startup_console(mut commands: Commands) {
     // Initialize console state
     commands.insert_resource(ConsoleState::default());
 
@@ -115,7 +70,7 @@ fn startup_console(mut commands: Commands) {
         });
 }
 
-fn update_console_toggle(
+pub(super) fn update_console_toggle(
     input: Res<ButtonInput<KeyCode>>,
     mut console_state: ResMut<ConsoleState>,
     mut console_query: Query<&mut Node, With<ConsoleContainer>>,
@@ -139,7 +94,7 @@ fn update_console_toggle(
 
 const MAX_HISTORY_LINES: usize = 200;
 
-fn update_console_input(
+pub(super) fn update_console_input(
     time: Res<Time>,
     mut char_events: MessageReader<bevy::input::keyboard::KeyboardInput>,
     input: Res<ButtonInput<KeyCode>>,
@@ -429,7 +384,9 @@ fn update_console_input(
     }
 }
 
-fn update_console_scroll(
+/// Automatically scrolls the console history to the bottom when the console is visible.
+/// This ensures that the most recent log entries are always visible to the user.
+pub(super) fn update_console_scroll(
     console_state: Res<ConsoleState>,
     mut scroll_query: Query<&mut ScrollPosition, With<ConsoleHistoryScroll>>,
 ) {
