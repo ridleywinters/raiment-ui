@@ -1,6 +1,6 @@
 use super::ConsoleState;
 use crate::cvars::CVarRegistry;
-use crate::script::process_script;
+use crate::scripting::process_script;
 use crate::ui::PlayerStats;
 use crate::ui_styles::EntityCommandsUIExt;
 use bevy::prelude::*;

@@ -2,7 +2,7 @@ mod collision;
 mod console;
 mod cvars;
 mod item;
-mod script;
+mod scripting;
 mod texture_loader;
 mod toolbar;
 mod ui;
@@ -1182,7 +1182,7 @@ fn update_check_item_collision(
             // Get the item definition and process the script
             if let Some(item_def) = item_definitions.items.get(item_type) {
                 println!("Item script: {}", item_def.script);
-                let output = script::process_script(&item_def.script, &mut stats, &mut cvars);
+                let output = scripting::process_script(&item_def.script, &mut stats, &mut cvars);
                 for line in &output {
                     println!("{}", line);
                 }
