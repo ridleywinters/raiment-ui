@@ -9,6 +9,7 @@ use super::cmd_do_damage::cmd_do_damage;
 use super::cmd_getvar::cmd_getvar;
 use super::cmd_listvars::cmd_listvars;
 use super::cmd_quit::cmd_quit;
+use super::cmd_savecvars::cmd_savecvars;
 use super::cmd_setvar::cmd_setvar;
 
 pub fn process_script(
@@ -47,6 +48,7 @@ pub fn process_script_with_actor(
             "setvar" => cmd_setvar(&tokens, stats, cvars),
             "getvar" => cmd_getvar(&tokens, stats, cvars),
             "listvars" => cmd_listvars(&tokens, stats, cvars),
+            "savecvars" => cmd_savecvars(&tokens, stats, cvars),
             "add_gold" => cmd_add_gold(&tokens, stats, cvars),
             "add_stamina" => cmd_add_stamina(&tokens, stats, cvars),
             "quit" => cmd_quit(&tokens, stats, cvars),

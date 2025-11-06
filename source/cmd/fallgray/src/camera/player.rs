@@ -4,5 +4,8 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct Player {
     pub speed: f32,
-    pub rot_speed: f32,
+
+    /// Accumulators for smooth mouse movement
+    pub yaw_velocity: f32,
+    pub pitch_velocity: f32,
 }

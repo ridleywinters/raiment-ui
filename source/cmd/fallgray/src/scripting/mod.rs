@@ -4,6 +4,7 @@ mod cmd_do_damage;
 mod cmd_getvar;
 mod cmd_listvars;
 mod cmd_quit;
+mod cmd_savecvars;
 mod cmd_setvar;
 mod cvars;
 mod process_script;

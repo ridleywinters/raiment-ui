@@ -1,3 +1,15 @@
+arrow_sensitivity:
+  type: float
+  value: 2.75
+mouse.invert_y:
+  type: int
+  value: 1
+mouse.sensitivity:
+  type: float
+  value: 0.0005000000237487257
+mouse_smooth:
+  type: int
+  value: 1
 weapon.axe.attack_power:
   type: int
   value: 15

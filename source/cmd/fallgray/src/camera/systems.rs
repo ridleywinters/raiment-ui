@@ -1,25 +1,66 @@
 use super::components::*;
+use super::mouse_look_settings::MouseLookSettings;
 use super::player::Player;
 use crate::collision::PLAYER_RADIUS;
 use crate::console::ConsoleState;
 use crate::map::Map;
+use crate::scripting::CVarRegistry;
+use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use rand::Rng;
 
 pub fn update_camera_control_system(
     time: Res<Time>,
     input: Res<ButtonInput<KeyCode>>,
+    mut mouse_motion: MessageReader<MouseMotion>,
     map: Res<Map>,
     console_state: Res<ConsoleState>,
-    mut query: Query<(&mut Transform, &Player)>,
+    mouse_look: Res<MouseLookSettings>,
+    cvars: Res<CVarRegistry>,
+    mut query: Query<(&mut Transform, &mut Player)>,
+    ui_interaction_query: Query<&Interaction>,
 ) {
     // Don't process camera controls if console is open
     if console_state.visible {
         return;
     }
 
-    for (mut transform, player) in query.iter_mut() {
+    for (mut transform, mut player) in query.iter_mut() {
         let dt = time.delta_secs();
+
+        // Mouse look input - only process if cursor is locked, console is closed, and not hovering UI
+        let ui_hovered = ui_interaction_query.iter().any(|i| *i != Interaction::None);
+        let can_mouse_look = mouse_look.cursor_locked && !console_state.visible && !ui_hovered;
+
+        if can_mouse_look {
+            // Read mouse sensitivity from CVar
+            let mouse_sensitivity = cvars.get_f32("mouse.sensitivity");
+
+            // Read invert_y setting from CVar (1 = inverted, 0 = normal)
+            let invert_y = cvars.get_i32("mouse.invert_y") != 0;
+            let invert_factor = if invert_y { 1.0 } else { -1.0 };
+
+            // Check if smooth mouse is enabled via CVar (1 = enabled, 0 = disabled)
+            let smooth_enabled = cvars.get_i32("mouse_smooth") != 0;
+
+            // Accumulate mouse motion
+            for event in mouse_motion.read() {
+                let yaw_input = -event.delta.x * mouse_sensitivity;
+                let pitch_input = -event.delta.y * mouse_sensitivity * invert_factor;
+
+                if smooth_enabled {
+                    // Add to velocity accumulators for smooth mode
+                    player.yaw_velocity += yaw_input;
+                    player.pitch_velocity += pitch_input;
+                } else {
+                    // Direct mode - apply rotation immediately via arrow key delta variables
+                    // (will be processed in the rotation section below)
+                }
+            }
+        } else {
+            // Clear mouse motion events when not using mouse look
+            mouse_motion.clear();
+        }
 
         // Check if modifier keys are pressed
         let ctrl_pressed =
@@ -54,20 +95,22 @@ pub fn update_camera_control_system(
         // Rotation input (Arrow keys)
         // Arrow left/right rotates around Z axis (yaw)
         // Arrow up/down changes pitch (looking up/down)
+        // Read arrow sensitivity from CVar
+        let arrow_sensitivity = cvars.get_f32("arrow_sensitivity");
         let mut yaw_delta = 0.0;
         let mut pitch_delta = 0.0;
 
         if input.pressed(KeyCode::ArrowLeft) {
-            yaw_delta += player.rot_speed * dt;
+            yaw_delta += arrow_sensitivity * dt;
         }
         if input.pressed(KeyCode::ArrowRight) {
-            yaw_delta -= player.rot_speed * dt;
+            yaw_delta -= arrow_sensitivity * dt;
         }
         if input.pressed(KeyCode::ArrowUp) {
-            pitch_delta += player.rot_speed * dt;
+            pitch_delta += arrow_sensitivity * dt;
         }
         if input.pressed(KeyCode::ArrowDown) {
-            pitch_delta -= player.rot_speed * dt;
+            pitch_delta -= arrow_sensitivity * dt;
         }
 
         // Get current yaw from the forward direction projected onto XY plane
@@ -93,8 +136,31 @@ pub fn update_camera_control_system(
                 yaw_snap += snap_increment;
             }
 
-            let max = scale * player.rot_speed * dt;
+            let max = scale * arrow_sensitivity * dt;
             yaw_delta += (yaw_snap - yaw).clamp(-max, max);
+        }
+
+        // Apply smooth mouse rotation (velocity-based)
+        let smooth_enabled = cvars.get_i32("mouse_smooth") != 0;
+        if smooth_enabled {
+            let dt_factor = dt * 60.0; // Frame-rate independence (60 FPS baseline)
+
+            // Clamp velocities to rotation limit
+            player.yaw_velocity = player
+                .yaw_velocity
+                .clamp(-mouse_look.rotation_limit, mouse_look.rotation_limit);
+            player.pitch_velocity = player
+                .pitch_velocity
+                .clamp(-mouse_look.rotation_limit, mouse_look.rotation_limit);
+
+            // Add velocity to rotation deltas
+            yaw_delta += player.yaw_velocity * dt_factor;
+            pitch_delta += player.pitch_velocity * dt_factor;
+
+            // Apply exponential decay to velocities
+            let decay = mouse_look.smooth_factor.powf(dt_factor);
+            player.yaw_velocity *= decay;
+            player.pitch_velocity *= decay;
         }
 
         // Apply rotation
@@ -111,9 +177,9 @@ pub fn update_camera_control_system(
                 let forward_3d = transform.forward().as_vec3();
                 let current_pitch = f32::asin(forward_3d.z.clamp(-1.0, 1.0));
 
-                // Calculate new pitch and clamp to limits
-                let pitch_limit = 70_f32.to_radians();
-                let new_pitch = (current_pitch + pitch_delta).clamp(-pitch_limit, pitch_limit);
+                // Calculate new pitch and clamp to limits (from MouseLookSettings)
+                let new_pitch = (current_pitch + pitch_delta)
+                    .clamp(-mouse_look.pitch_limit, mouse_look.pitch_limit);
                 let actual_pitch_delta = new_pitch - current_pitch;
 
                 // Apply the pitch rotation around the local right (X) axis
@@ -236,7 +302,8 @@ pub fn spawn_camera(commands: &mut Commands, position: Vec3) -> Entity {
             ),
             Player {
                 speed: 32.0,
-                rot_speed: 2.75,
+                yaw_velocity: 0.0,
+                pitch_velocity: 0.0,
             },
         ))
         .id()
