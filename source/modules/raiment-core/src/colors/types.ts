@@ -1,5 +1,5 @@
 // A # prefixed hexidecimal color string with 3, 6, or 8 digits characters.
-export type ColorHex = `#${string}`;
+export type HexColor = `#${string}`;
 
 export type RGBU8 = {
     r: number; // [0-255] in range

@@ -1,7 +1,7 @@
 import { parseHexColor } from "../colors/parse_hex_color.ts";
-import { ColorHex, RGBAU8 } from "../colors/types.ts";
+import { HexColor, RGBAU8 } from "../colors/types.ts";
 
-export function stringifyGIMPPalette(colors: ColorHex[]): string {
+export function stringifyGIMPPalette(colors: HexColor[]): string {
     const lines: string[] = [];
     lines.push("GIMP Palette");
     lines.push("#");

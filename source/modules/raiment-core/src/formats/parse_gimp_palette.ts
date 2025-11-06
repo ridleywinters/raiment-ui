@@ -1,14 +1,14 @@
 import * as core from "@raiment-core";
-import { ColorHex } from "../colors/types.ts";
+import { HexColor } from "../colors/types.ts";
 
 /**
  * Parses a GIMP Palette (.gpl) file content and returns an array of hex color strings.
  *
  * Returns null on an invalid format.
  */
-export function parseGIMPPalette(content: string): ColorHex[] | null {
+export function parseGIMPPalette(content: string): HexColor[] | null {
     const lines = content.split("\n");
-    const colors: ColorHex[] = [];
+    const colors: HexColor[] = [];
 
     // Validate that first line is "GIMP Palette"
     if (lines.length === 0 || !lines[0].trim().startsWith("GIMP Palette")) {

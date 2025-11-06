@@ -321,6 +321,11 @@ impl Map {
                     health: actor_def.max_health,
                     max_health: actor_def.max_health,
                     scale: actor_def.scale,
+                    armor: 0,
+                    physical_resistance: 0.0,
+                    fire_resistance: 0.0,
+                    ice_resistance: 0.0,
+                    poison_resistance: 0.0,
                 },
                 Mesh3d(meshes.add(Self::create_billboard_mesh(actor_def.scale))),
                 MeshMaterial3d(materials.add(StandardMaterial {

@@ -31,6 +31,16 @@ pub struct Actor {
     pub health: f32,
     pub max_health: f32,
     pub scale: f32,
+    /// Flat damage reduction
+    pub armor: i32,
+    /// Resistance to physical damage (0.0 = no resistance, 1.0 = immune)
+    pub physical_resistance: f32,
+    /// Resistance to fire damage (0.0 = no resistance, 1.0 = immune)
+    pub fire_resistance: f32,
+    /// Resistance to ice damage (0.0 = no resistance, 1.0 = immune)
+    pub ice_resistance: f32,
+    /// Resistance to poison damage (0.0 = no resistance, 1.0 = immune)
+    pub poison_resistance: f32,
 }
 
 /// Position data for actors in the map file

@@ -1,57 +1,243 @@
-weapon.followthrough_end:
-  type: float
-  value: 1.0
-weapon.rest_pos_x:
-  type: float
-  value: 0.8999999761581421
-weapon.rest_pos_y:
-  type: float
-  value: -0.44999998807907104
-weapon.rest_pos_z:
-  type: float
-  value: -1.2000000476837158
-weapon.rest_rotation_y:
-  type: float
-  value: 0.0
-weapon.rest_rotation_z:
-  type: float
-  value: 0.0
-weapon.swing_duration:
-  type: float
-  value: 0.4000000059604645
-weapon.swing_end:
-  type: float
-  value: 0.800000011920929
-weapon.thrust_pos_x:
-  type: float
-  value: 0.30000001192092896
-weapon.thrust_pos_y:
-  type: float
-  value: -0.44999998807907104
-weapon.thrust_pos_z:
-  type: float
-  value: -1.5
-weapon.thrust_rotation_y:
-  type: float
-  value: 0.10000000149011612
-weapon.thrust_rotation_z:
-  type: float
-  value: 1.5499999523162842
-weapon.windup_end:
-  type: float
-  value: 0.15000000596046448
-weapon.windup_pos_x:
+weapon.axe.attack_power:
+  type: int
+  value: 15
+weapon.axe.charge_bonus:
   type: float
   value: 0.699999988079071
-weapon.windup_pos_y:
+weapon.axe.hitbox_height:
   type: float
-  value: -0.3499999940395355
-weapon.windup_pos_z:
+  value: 7.0
+weapon.axe.hitbox_width:
   type: float
-  value: -0.800000011920929
-weapon.windup_rotation_y:
+  value: 5.0
+weapon.axe.max_charge_time:
+  type: float
+  value: 2.5
+weapon.axe.range:
+  type: float
+  value: 7.0
+weapon.axe.rest_pos_x:
+  type: float
+  value: 0.8999999761581421
+weapon.axe.rest_pos_y:
+  type: float
+  value: -0.5
+weapon.axe.rest_pos_z:
+  type: float
+  value: -1.2000000476837158
+weapon.axe.rest_rotation_y:
+  type: float
+  value: 0.0
+weapon.axe.rest_rotation_z:
+  type: float
+  value: 0.0
+weapon.axe.swing_duration:
+  type: float
+  value: 0.5
+weapon.axe.swing_pos_x:
+  type: float
+  value: 0.4000000059604645
+weapon.axe.swing_pos_y:
+  type: float
+  value: -0.30000001192092896
+weapon.axe.swing_pos_z:
+  type: float
+  value: -1.0
+weapon.axe.swing_rotation_y:
+  type: float
+  value: 0.20000000298023224
+weapon.axe.swing_rotation_z:
+  type: float
+  value: 0.30000001192092896
+weapon.axe.thrust_pos_x:
+  type: float
+  value: 0.30000001192092896
+weapon.axe.thrust_pos_y:
+  type: float
+  value: -0.699999988079071
+weapon.axe.thrust_pos_z:
+  type: float
+  value: -1.399999976158142
+weapon.axe.thrust_rotation_y:
+  type: float
+  value: 0.0
+weapon.axe.thrust_rotation_z:
+  type: float
+  value: 1.2000000476837158
+weapon.axe.windup_pos_x:
+  type: float
+  value: 0.5
+weapon.axe.windup_pos_y:
+  type: float
+  value: 0.20000000298023224
+weapon.axe.windup_pos_z:
+  type: float
+  value: -0.6000000238418579
+weapon.axe.windup_rotation_y:
+  type: float
+  value: 0.5
+weapon.axe.windup_rotation_z:
+  type: float
+  value: -1.2000000476837158
+weapon.spear.attack_power:
+  type: int
+  value: 8
+weapon.spear.charge_bonus:
+  type: float
+  value: 0.4000000059604645
+weapon.spear.hitbox_height:
+  type: float
+  value: 4.0
+weapon.spear.hitbox_width:
+  type: float
+  value: 2.0
+weapon.spear.max_charge_time:
+  type: float
+  value: 1.5
+weapon.spear.range:
+  type: float
+  value: 12.0
+weapon.spear.rest_pos_x:
   type: float
   value: 0.800000011920929
-weapon.windup_rotation_z:
+weapon.spear.rest_pos_y:
+  type: float
+  value: -0.4000000059604645
+weapon.spear.rest_pos_z:
+  type: float
+  value: -1.0
+weapon.spear.rest_rotation_y:
+  type: float
+  value: 0.30000001192092896
+weapon.spear.rest_rotation_z:
+  type: float
+  value: 0.0
+weapon.spear.swing_duration:
+  type: float
+  value: 0.3499999940395355
+weapon.spear.swing_pos_x:
+  type: float
+  value: 0.699999988079071
+weapon.spear.swing_pos_y:
+  type: float
+  value: -0.3499999940395355
+weapon.spear.swing_pos_z:
+  type: float
+  value: -0.800000011920929
+weapon.spear.swing_rotation_y:
+  type: float
+  value: 0.4000000059604645
+weapon.spear.swing_rotation_z:
+  type: float
+  value: 0.0
+weapon.spear.thrust_pos_x:
+  type: float
+  value: 0.20000000298023224
+weapon.spear.thrust_pos_y:
+  type: float
+  value: -0.4000000059604645
+weapon.spear.thrust_pos_z:
+  type: float
+  value: -2.0
+weapon.spear.thrust_rotation_y:
+  type: float
+  value: 0.10000000149011612
+weapon.spear.thrust_rotation_z:
+  type: float
+  value: 0.20000000298023224
+weapon.spear.windup_pos_x:
+  type: float
+  value: 0.8999999761581421
+weapon.spear.windup_pos_y:
+  type: float
+  value: -0.30000001192092896
+weapon.spear.windup_pos_z:
+  type: float
+  value: -0.5
+weapon.spear.windup_rotation_y:
+  type: float
+  value: 0.6000000238418579
+weapon.spear.windup_rotation_z:
+  type: float
+  value: -0.30000001192092896
+weapon.sword.attack_power:
+  type: int
+  value: 10
+weapon.sword.charge_bonus:
+  type: float
+  value: 0.5
+weapon.sword.hitbox_height:
+  type: float
+  value: 6.0
+weapon.sword.hitbox_width:
+  type: float
+  value: 4.0
+weapon.sword.max_charge_time:
+  type: float
+  value: 2.0
+weapon.sword.range:
+  type: float
+  value: 8.0
+weapon.sword.rest_pos_x:
+  type: float
+  value: 0.8999999761581421
+weapon.sword.rest_pos_y:
+  type: float
+  value: -0.44999998807907104
+weapon.sword.rest_pos_z:
+  type: float
+  value: -1.2000000476837158
+weapon.sword.rest_rotation_y:
+  type: float
+  value: 0.0
+weapon.sword.rest_rotation_z:
+  type: float
+  value: 0.0
+weapon.sword.swing_duration:
+  type: float
+  value: 0.4000000059604645
+weapon.sword.swing_pos_x:
+  type: float
+  value: 0.5
+weapon.sword.swing_pos_y:
+  type: float
+  value: -0.4000000059604645
+weapon.sword.swing_pos_z:
+  type: float
+  value: -1.0
+weapon.sword.swing_rotation_y:
+  type: float
+  value: 0.30000001192092896
+weapon.sword.swing_rotation_z:
+  type: float
+  value: 0.800000011920929
+weapon.sword.thrust_pos_x:
+  type: float
+  value: 0.30000001192092896
+weapon.sword.thrust_pos_y:
+  type: float
+  value: -0.44999998807907104
+weapon.sword.thrust_pos_z:
+  type: float
+  value: -1.5
+weapon.sword.thrust_rotation_y:
+  type: float
+  value: 0.10000000149011612
+weapon.sword.thrust_rotation_z:
+  type: float
+  value: 1.5499999523162842
+weapon.sword.windup_pos_x:
+  type: float
+  value: 0.699999988079071
+weapon.sword.windup_pos_y:
+  type: float
+  value: -0.3499999940395355
+weapon.sword.windup_pos_z:
+  type: float
+  value: -0.800000011920929
+weapon.sword.windup_rotation_y:
+  type: float
+  value: 0.800000011920929
+weapon.sword.windup_rotation_z:
   type: float
   value: -0.5

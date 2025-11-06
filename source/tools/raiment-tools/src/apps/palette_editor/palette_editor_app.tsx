@@ -1,5 +1,5 @@
 import * as core from "@raiment-core";
-import { type ColorHex, RGBAU8Array } from "@raiment-core";
+import { type HexColor, RGBAU8Array } from "@raiment-core";
 import { Div, invokeDownload, useEventListener } from "@raiment-ui";
 import React, { JSX } from "react";
 import { Palette } from "./palette.ts";
@@ -12,7 +12,10 @@ export function PaletteEditorApp(): JSX.Element {
 
     React.useEffect(() => {
         const go = async () => {
-            const gplContent = await serverAPI.readFile("palette/palette.gpl", "text") as string;
+            const gplContent = await serverAPI.readFile(
+                "palette/palette.gpl",
+                "text",
+            ) as string;
             const colors = core.parseGIMPPalette(gplContent);
             const pal = Palette.fromGIMPPalette(colors ?? []);
             setPalette(pal);
@@ -22,7 +25,9 @@ export function PaletteEditorApp(): JSX.Element {
 
     return (
         <ToolAppFrame>
-            {!palette ? <Div sl="m32">Loading palette...</Div> : <AppView2 palette={palette} />}
+            {!palette
+                ? <Div sl="m32">Loading palette...</Div>
+                : <AppView2 palette={palette} />}
         </ToolAppFrame>
     );
 }
@@ -95,7 +100,11 @@ function AppView2({ palette }: { palette: Palette }): JSX.Element {
                     </Div>
                     <Div sl="flex-column mb-16">
                         {palette.colors.map((colorSet, idx) => (
-                            <PaletteRow key={idx} palette={palette} rowIndex={idx} />
+                            <PaletteRow
+                                key={idx}
+                                palette={palette}
+                                rowIndex={idx}
+                            />
                         ))}
                     </Div>
                 </Div>
@@ -160,7 +169,12 @@ function PaletteCanvas({ palette }: { palette: Palette }): JSX.Element {
                 }
                 const color = colors[index];
                 ctx.fillStyle = color;
-                ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                ctx.fillRect(
+                    x * BLOCK_SIZE,
+                    y * BLOCK_SIZE,
+                    BLOCK_SIZE,
+                    BLOCK_SIZE,
+                );
             }
         }
     }, [gen]);
@@ -172,12 +186,19 @@ function PaletteCanvas({ palette }: { palette: Palette }): JSX.Element {
                 flexDirection: "column",
             }}
         >
-            <canvas ref={ref} width={256} height={256} style={{ border: "1px solid #444" }} />
+            <canvas
+                ref={ref}
+                width={256}
+                height={256}
+                style={{ border: "1px solid #444" }}
+            />
         </div>
     );
 }
 
-function PaletteRow({ palette, rowIndex }: { palette: Palette; rowIndex: number }): JSX.Element {
+function PaletteRow(
+    { palette, rowIndex }: { palette: Palette; rowIndex: number },
+): JSX.Element {
     return (
         <div
             style={{
@@ -246,7 +267,9 @@ function PaletteRow({ palette, rowIndex }: { palette: Palette; rowIndex: number 
 }
 
 function ImageDropPreview({ palette }: { palette: Palette }): JSX.Element {
-    const [droppedImage, setDroppedImage] = React.useState<HTMLImageElement | null>(null);
+    const [droppedImage, setDroppedImage] = React.useState<
+        HTMLImageElement | null
+    >(null);
     const [isDragging, setIsDragging] = React.useState(false);
     const originalCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
     const mappedCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
@@ -254,24 +277,29 @@ function ImageDropPreview({ palette }: { palette: Palette }): JSX.Element {
 
     const gen = useEventListener(palette.events, "update");
 
-    const handleCanvasClick = React.useCallback((evt: React.MouseEvent<HTMLCanvasElement>) => {
-        const canvas = evt.currentTarget;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-            return;
-        }
-        const rect = canvas.getBoundingClientRect();
-        const x = Math.floor(evt.clientX - rect.left);
-        const y = Math.floor(evt.clientY - rect.top);
+    const handleCanvasClick = React.useCallback(
+        (evt: React.MouseEvent<HTMLCanvasElement>) => {
+            const canvas = evt.currentTarget;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor(evt.clientX - rect.left);
+            const y = Math.floor(evt.clientY - rect.top);
 
-        const pixelData = ctx.getImageData(x, y, 1, 1).data;
-        const hexColor = core.rgbau8ArrayToHex7(pixelData as unknown as RGBAU8Array);
-        navigator.clipboard.writeText(hexColor).then(() => {
-            console.log(`Copied ${hexColor} to clipboard`);
-        }).catch((err) => {
-            console.error("Failed to copy color to clipboard:", err);
-        });
-    }, []);
+            const pixelData = ctx.getImageData(x, y, 1, 1).data;
+            const hexColor = core.rgbau8ArrayToHex7(
+                pixelData as unknown as RGBAU8Array,
+            );
+            navigator.clipboard.writeText(hexColor).then(() => {
+                console.log(`Copied ${hexColor} to clipboard`);
+            }).catch((err) => {
+                console.error("Failed to copy color to clipboard:", err);
+            });
+        },
+        [],
+    );
 
     React.useEffect(() => {
         const dropZone = dropZoneRef.current;
@@ -293,7 +321,9 @@ function ImageDropPreview({ palette }: { palette: Palette }): JSX.Element {
             setIsDragging(false);
 
             const files = Array.from(evt.dataTransfer?.files ?? []);
-            const imageFile = files.find((file) => file.type.startsWith("image/"));
+            const imageFile = files.find((file) =>
+                file.type.startsWith("image/")
+            );
             if (imageFile) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -318,7 +348,10 @@ function ImageDropPreview({ palette }: { palette: Palette }): JSX.Element {
     }, []);
 
     React.useEffect(() => {
-        if (!droppedImage || !originalCanvasRef.current || !mappedCanvasRef.current) {
+        if (
+            !droppedImage || !originalCanvasRef.current ||
+            !mappedCanvasRef.current
+        ) {
             return;
         }
 
@@ -339,7 +372,13 @@ function ImageDropPreview({ palette }: { palette: Palette }): JSX.Element {
 
         // Draw original image at 8x scale
         originalCtx.imageSmoothingEnabled = false;
-        originalCtx.drawImage(droppedImage, 0, 0, droppedImage.width * 8, droppedImage.height * 8);
+        originalCtx.drawImage(
+            droppedImage,
+            0,
+            0,
+            droppedImage.width * 8,
+            droppedImage.height * 8,
+        );
 
         // Create a temporary canvas at original size to read pixel data
         const tempCanvas = document.createElement("canvas");
@@ -351,15 +390,25 @@ function ImageDropPreview({ palette }: { palette: Palette }): JSX.Element {
         }
         tempCtx.drawImage(droppedImage, 0, 0);
 
-        const imageData = tempCtx.getImageData(0, 0, droppedImage.width, droppedImage.height);
+        const imageData = tempCtx.getImageData(
+            0,
+            0,
+            droppedImage.width,
+            droppedImage.height,
+        );
         const pixels = imageData.data;
 
         // Create mapped image data
-        const mappedImageData = mappedCtx.createImageData(droppedImage.width, droppedImage.height);
+        const mappedImageData = mappedCtx.createImageData(
+            droppedImage.width,
+            droppedImage.height,
+        );
         const mappedPixels = mappedImageData.data;
 
         for (let i = 0; i < pixels.length; i += 4) {
-            const rgba: RGBAU8Array = [...pixels.slice(i, i + 4)] as RGBAU8Array;
+            const rgba: RGBAU8Array = [
+                ...pixels.slice(i, i + 4),
+            ] as RGBAU8Array;
             const hexColor = core.rgbau8ArrayToHex7(rgba);
             const closestColor = findClosestColor(hexColor, paletteColors);
             const closestRgb = core.parseHexRGBU8(closestColor);
@@ -401,12 +450,16 @@ function ImageDropPreview({ palette }: { palette: Palette }): JSX.Element {
             <div
                 ref={dropZoneRef}
                 style={{
-                    border: isDragging ? "2px dashed #4CAF50" : "2px dashed #666",
+                    border: isDragging
+                        ? "2px dashed #4CAF50"
+                        : "2px dashed #666",
                     borderRadius: "8px",
                     padding: "16px",
                     minWidth: "300px",
                     minHeight: "40px",
-                    backgroundColor: isDragging ? "rgba(76, 175, 80, 0.1)" : "transparent",
+                    backgroundColor: isDragging
+                        ? "rgba(76, 175, 80, 0.1)"
+                        : "transparent",
                     transition: "all 0.2s",
                     display: "flex",
                     alignItems: "center",
@@ -446,7 +499,10 @@ function hslBiasedDistance(
     hsl2: { h: number; s: number; l: number },
 ): number {
     // Calculate hue distance (circular)
-    const dh = Math.min(Math.abs(hsl1.h - hsl2.h), 1 - Math.abs(hsl1.h - hsl2.h));
+    const dh = Math.min(
+        Math.abs(hsl1.h - hsl2.h),
+        1 - Math.abs(hsl1.h - hsl2.h),
+    );
     const ds = Math.abs(hsl1.s - hsl2.s);
     const dl = Math.abs(hsl1.l - hsl2.l);
 
@@ -454,7 +510,10 @@ function hslBiasedDistance(
     return Math.sqrt(dh * dh * 2 + dl * dl + ds * ds * 0.5);
 }
 
-function findClosestColor(targetHex: ColorHex, paletteColors: ColorHex[]): ColorHex {
+function findClosestColor(
+    targetHex: HexColor,
+    paletteColors: HexColor[],
+): HexColor {
     const targetRGB = core.parseHexRGBU8(targetHex);
     const targetHSL = core.rgbu8ToHSLF32(targetRGB);
 

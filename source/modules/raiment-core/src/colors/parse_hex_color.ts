@@ -1,4 +1,4 @@
-import { ColorHex, RGBAU8, RGBU8 } from "./types.ts";
+import { HexColor, RGBAU8, RGBU8 } from "./types.ts";
 
 /**
  * Parse hex colors of the following formats:
@@ -12,7 +12,7 @@ import { ColorHex, RGBAU8, RGBU8 } from "./types.ts";
  *
  * Throws an `Error` on invalid input.
  */
-export function parseHexColor(hex: ColorHex | string): RGBU8 | RGBAU8 {
+export function parseHexColor(hex: HexColor | string): RGBU8 | RGBAU8 {
     // Do the actual parsing work, then check for validity
     const result = parseWorker(hex);
     if (
@@ -31,7 +31,7 @@ export function parseHexColor(hex: ColorHex | string): RGBU8 | RGBAU8 {
     return result;
 }
 
-export function parseHexRGBU8(hex: ColorHex | string): RGBU8 {
+export function parseHexRGBU8(hex: HexColor | string): RGBU8 {
     const result = parseHexColor(hex);
     if ("a" in result) {
         throw new Error(`Expected RGB color but got RGBA: ${hex}`);
@@ -39,7 +39,7 @@ export function parseHexRGBU8(hex: ColorHex | string): RGBU8 {
     return result as RGBU8;
 }
 
-function parseWorker(hex: ColorHex | string): RGBU8 | RGBAU8 {
+function parseWorker(hex: HexColor | string): RGBU8 | RGBAU8 {
     const digits = hex.startsWith("#") ? hex.slice(1) : hex;
     let r: number, g: number, b: number, a: number;
 

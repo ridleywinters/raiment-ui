@@ -1,5 +1,5 @@
 import React, { type JSX } from "react";
-import type { ColorHex } from "@raiment-core";
+import type { HexColor } from "@raiment-core";
 import { Div, useThrottledCallback } from "@raiment-ui";
 
 /**
@@ -11,12 +11,15 @@ export function ColorPicker({
     value,
     onChange,
 }: {
-    value: ColorHex;
-    onChange: (newColor: ColorHex) => void;
+    value: HexColor;
+    onChange: (newColor: HexColor) => void;
 }): JSX.Element {
-    const handleChange = useThrottledCallback((evt: React.ChangeEvent<HTMLInputElement>) => {
-        onChange(evt.target.value as ColorHex);
-    }, 200);
+    const handleChange = useThrottledCallback(
+        (evt: React.ChangeEvent<HTMLInputElement>) => {
+            onChange(evt.target.value as HexColor);
+        },
+        200,
+    );
 
     return (
         <Div>

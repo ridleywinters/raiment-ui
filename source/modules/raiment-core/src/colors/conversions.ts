@@ -1,8 +1,8 @@
-import { ColorHex, HSLF32, RGBU8 } from "./types.ts";
+import { HexColor, HSLF32, RGBU8 } from "./types.ts";
 
 export function rgbau8ArrayToHex7(
     rgba: Uint8Array | [number, number, number, number],
-): ColorHex {
+): HexColor {
     if (rgba.length !== 4) {
         throw new Error(
             `Expected RGBA array of length 4 but got length ${rgba.length}`,

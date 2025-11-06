@@ -22,6 +22,7 @@ _build-imp: ensure
     build/build-matthewsmith-sprites.ts
     mkdir -p ./base/actors
     cp -f ${REPO_ROOT}/source/content/actors/actors.yaml ./base/actors/actors.yaml
+    build/build-sounds.ts
 
 rebuild: clean build
 

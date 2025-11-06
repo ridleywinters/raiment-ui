@@ -1,6 +1,7 @@
 mod actor;
 mod camera;
 mod collision;
+mod combat;
 mod console;
 mod item;
 mod map;
@@ -11,11 +12,15 @@ mod texture_loader;
 mod toolbar;
 mod ui;
 mod ui_styles;
-
 use actor::*;
 use bevy::prelude::*;
 use camera::{CameraPlugin, Player, spawn_camera, spawn_player_lights};
 use collision::check_circle_collision;
+use combat::{
+    AttackState, CombatAudio, CombatInput, StateTransition, WeaponDefinitions, apply_status_effect,
+    play_hit_sound, play_swing_sound, spawn_blood_particles, spawn_damage_number,
+    update_blood_particles, update_camera_shake, update_damage_numbers, update_status_effects,
+};
 use console::*;
 use item::*;
 use map::Map;
@@ -67,6 +72,10 @@ fn main() {
                 update_weapon_swing_collision,
                 update_actor_death,
                 update_actor_health_indicators,
+                update_camera_shake.after(camera::update_camera_control_system),
+                update_damage_numbers,
+                update_blood_particles,
+                update_status_effects,
                 update_ui,
                 update_billboards,
                 update_spawn_item_on_click,
@@ -86,17 +95,26 @@ struct GroundPlane;
 // Weapon swing components
 #[derive(Component)]
 struct WeaponSprite {
-    swing_timer: Timer,
-    is_swinging: bool,
-    collision_checked: bool, // Track if we've checked collision this swing
+    /// Current attack state (replaces is_swinging and collision_checked)
+    attack_state: AttackState,
+
+    /// Charge progress (0.0 to weapon's max_charge_time)
+    charge_progress: f32,
+
+    /// Entities already hit during this swing (prevents double-hits)
+    hit_entities: std::collections::HashSet<Entity>,
+
+    /// Currently equipped weapon type
+    weapon_type: String,
 }
 
 impl Default for WeaponSprite {
     fn default() -> Self {
         Self {
-            swing_timer: Timer::from_seconds(0.4, TimerMode::Once),
-            is_swinging: false,
-            collision_checked: false,
+            attack_state: AttackState::Idle,
+            charge_progress: 0.0,
+            hit_entities: std::collections::HashSet::new(),
+            weapon_type: "sword".to_string(), // Default weapon
         }
     }
 }
@@ -112,33 +130,6 @@ fn ease_in_out_cubic(t: f32) -> f32 {
     } else {
         1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
     }
-}
-
-/// Initialize console variables used by the weapon system
-///
-/// This is done to allow the weapon animation parameters to be
-/// at runtime for immediate testing.  
-fn initialize_weapon_cvars(cvars: &mut CVarRegistry) {
-    // Weapon animation cvars
-    cvars.init_f32("weapon.swing_duration", 0.4);
-    cvars.init_f32("weapon.windup_end", 0.15);
-    cvars.init_f32("weapon.swing_end", 0.80);
-    cvars.init_f32("weapon.followthrough_end", 1.0);
-    cvars.init_f32("weapon.rest_pos_x", 0.9);
-    cvars.init_f32("weapon.rest_pos_y", -0.45);
-    cvars.init_f32("weapon.rest_pos_z", -1.2);
-    cvars.init_f32("weapon.rest_rotation_z", 0.0);
-    cvars.init_f32("weapon.rest_rotation_y", 0.0);
-    cvars.init_f32("weapon.windup_pos_x", 0.7);
-    cvars.init_f32("weapon.windup_pos_y", -0.35);
-    cvars.init_f32("weapon.windup_pos_z", -0.8);
-    cvars.init_f32("weapon.windup_rotation_z", -0.5);
-    cvars.init_f32("weapon.windup_rotation_y", 0.8);
-    cvars.init_f32("weapon.thrust_pos_x", 0.3);
-    cvars.init_f32("weapon.thrust_pos_y", -0.45);
-    cvars.init_f32("weapon.thrust_pos_z", -1.5);
-    cvars.init_f32("weapon.thrust_rotation_z", 1.55);
-    cvars.init_f32("weapon.thrust_rotation_y", 0.1);
 }
 
 fn startup_system(
@@ -203,6 +194,16 @@ fn startup_system(
         actors: actor_defs_file.actors,
     };
 
+    // Load weapon definitions
+    let weapon_filename = std::env::var("REPO_ROOT")
+        .map(|repo_root| format!("{}/source/cmd/fallgray/data/weapons.yaml", repo_root))
+        .unwrap_or_else(|_| "data/weapons.yaml".to_string());
+    let weapon_definitions = WeaponDefinitions::load_from_file(&weapon_filename)
+        .unwrap_or_else(|e| panic!("Failed to load weapons: {}", e));
+
+    // Register weapon CVars for runtime tuning
+    weapon_definitions.register_cvars(&mut cvars);
+
     // Load map from file and spawn all entities
     let map = Map::load_from_file(
         &mut commands,
@@ -230,17 +231,24 @@ fn startup_system(
     let camera_entity = spawn_camera(&mut commands, player_start_pos);
     spawn_player_lights(&mut commands, player_start_pos);
 
-    initialize_weapon_cvars(&mut cvars);
-
     // Spawn weapon sprite as child of camera for first-person view
+    // (Do this before inserting weapon_definitions as resource)
     spawn_weapon_sprite(
         &mut commands,
         &mut meshes,
         &mut materials,
         &asset_server,
         camera_entity,
+        &weapon_definitions,
         &cvars,
     );
+
+    // Now insert weapon_definitions as resource
+    commands.insert_resource(weapon_definitions);
+
+    // Load combat audio
+    let combat_audio = CombatAudio::load_sounds(&asset_server);
+    commands.insert_resource(combat_audio);
 }
 
 fn update_billboards(
@@ -270,12 +278,15 @@ fn update_billboards(
 }
 
 fn update_weapon_swing(
+    mut commands: Commands,
     time: Res<Time>,
     mouse_button: Res<ButtonInput<MouseButton>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     toolbar: Res<Toolbar>,
     console_state: Res<ConsoleState>,
     cvars: Res<CVarRegistry>,
+    weapon_definitions: Res<WeaponDefinitions>,
+    combat_audio: Res<CombatAudio>,
     mut weapon_query: Query<(&mut Transform, &mut WeaponSprite, &mut Visibility)>,
     ui_interaction_query: Query<&Interaction>,
 ) {
@@ -287,206 +298,288 @@ fn update_weapon_swing(
             Visibility::Hidden
         };
 
-        // Check for attack input (left mouse button or spacebar) - only swing if slot 1 is active
-        if (mouse_button.just_pressed(MouseButton::Left) || keyboard.just_pressed(KeyCode::Space))
-            && !weapon.is_swinging
-            && toolbar.active_slot == 1
-            && !console_state.visible
-        {
-            // Check if any UI element is being interacted with
-            let ui_blocked = ui_interaction_query
-                .iter()
-                .any(|interaction| *interaction != Interaction::None);
-            if !ui_blocked {
-                weapon.is_swinging = true;
-                weapon.swing_timer.reset();
-                weapon.collision_checked = false; // Reset collision check for new swing
+        // Get weapon definition with current CVar values
+        let Some(weapon_def) = weapon_definitions.get_with_cvars(&weapon.weapon_type, &cvars)
+        else {
+            continue;
+        };
+
+        // Build combat input state
+        let input = CombatInput {
+            attack_pressed: (mouse_button.just_pressed(MouseButton::Left)
+                || keyboard.just_pressed(KeyCode::Space))
+                && toolbar.active_slot == 1
+                && !console_state.visible
+                && !ui_interaction_query.iter().any(|i| *i != Interaction::None),
+            attack_held: (mouse_button.pressed(MouseButton::Left)
+                || keyboard.pressed(KeyCode::Space))
+                && toolbar.active_slot == 1
+                && !console_state.visible,
+        };
+
+        // Handle charging when idle
+        if matches!(weapon.attack_state, AttackState::Idle) {
+            if input.attack_held {
+                weapon.charge_progress += time.delta_secs();
+                weapon.charge_progress = weapon.charge_progress.min(weapon_def.max_charge_time);
+
+                // Add charge vibration to weapon position
+                let charge_ratio = weapon.charge_progress / weapon_def.max_charge_time;
+                let shake_offset = Vec3::new(
+                    0.0,
+                    0.0,
+                    (time.elapsed_secs() * 10.0).sin() * charge_ratio * 0.05,
+                );
+                transform.translation += shake_offset;
             }
         }
 
-        if weapon.is_swinging {
-            weapon.swing_timer.tick(time.delta());
-            let progress = weapon.swing_timer.fraction();
+        // Update attack state
+        let transition = weapon
+            .attack_state
+            .update(time.delta_secs(), &input, &weapon_def);
 
-            // Read animation parameters from cvars
-            let rest_pos = Vec3::new(
-                cvars.get_f32("weapon.rest_pos_x"),
-                cvars.get_f32("weapon.rest_pos_y"),
-                cvars.get_f32("weapon.rest_pos_z"),
-            );
-            let rest_rotation_z = cvars.get_f32("weapon.rest_rotation_z");
-            let rest_rotation_y = cvars.get_f32("weapon.rest_rotation_y");
+        match transition {
+            StateTransition::To(new_state) => {
+                // Play swing sound when starting a new attack
+                if matches!(new_state, AttackState::Windup { .. }) {
+                    play_swing_sound(&mut commands, &combat_audio);
+                }
 
-            let windup_pos = Vec3::new(
-                cvars.get_f32("weapon.windup_pos_x"),
-                cvars.get_f32("weapon.windup_pos_y"),
-                cvars.get_f32("weapon.windup_pos_z"),
-            );
-            let windup_rotation_z = cvars.get_f32("weapon.windup_rotation_z");
-            let windup_rotation_y = cvars.get_f32("weapon.windup_rotation_y");
-
-            let thrust_pos = Vec3::new(
-                cvars.get_f32("weapon.thrust_pos_x"),
-                cvars.get_f32("weapon.thrust_pos_y"),
-                cvars.get_f32("weapon.thrust_pos_z"),
-            );
-            let thrust_rotation_z = cvars.get_f32("weapon.thrust_rotation_z");
-            let thrust_rotation_y = cvars.get_f32("weapon.thrust_rotation_y");
-
-            let windup_end = cvars.get_f32("weapon.windup_end");
-            let swing_end = cvars.get_f32("weapon.swing_end");
-
-            // Calculate current position and rotation based on phase
-            let (current_pos, current_rotation_z, current_rotation_y) = if progress < windup_end {
-                // Wind-up phase: pull back toward camera
-                let phase_t = progress / windup_end;
-                let eased_t = ease_out_quad(phase_t);
-
-                (
-                    rest_pos.lerp(windup_pos, eased_t),
-                    rest_rotation_z + (windup_rotation_z - rest_rotation_z) * eased_t,
-                    rest_rotation_y + (windup_rotation_y - rest_rotation_y) * eased_t,
-                )
-            } else if progress < swing_end {
-                // Thrust phase: fast FORWARD motion with rotation
-                let phase_t = (progress - windup_end) / (swing_end - windup_end);
-                let eased_t = ease_in_out_cubic(phase_t);
-
-                (
-                    windup_pos.lerp(thrust_pos, eased_t),
-                    windup_rotation_z + (thrust_rotation_z - windup_rotation_z) * eased_t,
-                    windup_rotation_y + (thrust_rotation_y - windup_rotation_y) * eased_t,
-                )
-            } else {
-                // Follow-through phase: deceleration back to rest
-                let phase_t = (progress - swing_end)
-                    / (cvars.get_f32("weapon.followthrough_end") - swing_end);
-                let eased_t = ease_out_quad(phase_t);
-
-                (
-                    thrust_pos.lerp(rest_pos, eased_t),
-                    thrust_rotation_z + (rest_rotation_z - thrust_rotation_z) * eased_t,
-                    thrust_rotation_y + (rest_rotation_y - thrust_rotation_y) * eased_t,
-                )
-            };
-
-            // Apply transforms - combine Z rotation and Y rotation (tilt)
-            transform.translation = current_pos;
-            transform.rotation = Quat::from_rotation_z(current_rotation_z)
-                * Quat::from_rotation_y(current_rotation_y);
-            // Check if animation is complete
-            if weapon.swing_timer.is_finished() {
-                weapon.is_swinging = false;
-                weapon.collision_checked = false;
-                transform.translation = rest_pos;
-                transform.rotation =
-                    Quat::from_rotation_z(rest_rotation_z) * Quat::from_rotation_y(rest_rotation_y);
+                // Clear hit list when returning to idle
+                if matches!(new_state, AttackState::Idle) {
+                    weapon.hit_entities.clear();
+                    weapon.charge_progress = 0.0;
+                }
+                weapon.attack_state = new_state;
             }
+            StateTransition::TriggerHitDetection => {
+                // Hit detection will be handled by collision system
+            }
+            StateTransition::Stay => {}
         }
+
+        // Animate weapon based on current state
+        let overall_progress = weapon.attack_state.get_overall_progress();
+
+        // Get keyframe positions from weapon definition
+        let (current_pos, current_rot) = if overall_progress < 0.15 {
+            // Windup phase
+            let t = ease_out_quad(overall_progress / 0.15);
+            let pos = weapon_def
+                .rest_keyframe
+                .position
+                .lerp(weapon_def.windup_keyframe.position, t);
+            let rot_z = weapon_def.rest_keyframe.rotation.0
+                + (weapon_def.windup_keyframe.rotation.0 - weapon_def.rest_keyframe.rotation.0) * t;
+            let rot_y = weapon_def.rest_keyframe.rotation.1
+                + (weapon_def.windup_keyframe.rotation.1 - weapon_def.rest_keyframe.rotation.1) * t;
+            (pos, (rot_z, rot_y))
+        } else if overall_progress < 0.50 {
+            // Swing phase
+            let t = ease_in_out_cubic((overall_progress - 0.15) / 0.35);
+            let pos = weapon_def
+                .windup_keyframe
+                .position
+                .lerp(weapon_def.swing_keyframe.position, t);
+            let rot_z = weapon_def.windup_keyframe.rotation.0
+                + (weapon_def.swing_keyframe.rotation.0 - weapon_def.windup_keyframe.rotation.0)
+                    * t;
+            let rot_y = weapon_def.windup_keyframe.rotation.1
+                + (weapon_def.swing_keyframe.rotation.1 - weapon_def.windup_keyframe.rotation.1)
+                    * t;
+            (pos, (rot_z, rot_y))
+        } else if overall_progress < 0.80 {
+            // Thrust phase
+            let t = ease_in_out_cubic((overall_progress - 0.50) / 0.30);
+            let pos = weapon_def
+                .swing_keyframe
+                .position
+                .lerp(weapon_def.thrust_keyframe.position, t);
+            let rot_z = weapon_def.swing_keyframe.rotation.0
+                + (weapon_def.thrust_keyframe.rotation.0 - weapon_def.swing_keyframe.rotation.0)
+                    * t;
+            let rot_y = weapon_def.swing_keyframe.rotation.1
+                + (weapon_def.thrust_keyframe.rotation.1 - weapon_def.swing_keyframe.rotation.1)
+                    * t;
+            (pos, (rot_z, rot_y))
+        } else {
+            // Recovery phase
+            let t = ease_out_quad((overall_progress - 0.80) / 0.20);
+            let pos = weapon_def
+                .thrust_keyframe
+                .position
+                .lerp(weapon_def.rest_keyframe.position, t);
+            let rot_z = weapon_def.thrust_keyframe.rotation.0
+                + (weapon_def.rest_keyframe.rotation.0 - weapon_def.thrust_keyframe.rotation.0) * t;
+            let rot_y = weapon_def.thrust_keyframe.rotation.1
+                + (weapon_def.rest_keyframe.rotation.1 - weapon_def.thrust_keyframe.rotation.1) * t;
+            (pos, (rot_z, rot_y))
+        };
+
+        // Apply animation to transform
+        transform.translation = current_pos;
+        transform.rotation =
+            Quat::from_rotation_z(current_rot.0) * Quat::from_rotation_y(current_rot.1);
     }
 }
 
 fn update_weapon_swing_collision(
-    camera_query: Query<&Transform, With<Camera3d>>,
+    mut commands: Commands,
+    camera_query: Query<(Entity, &Transform), With<Camera3d>>,
     mut actor_query: Query<(Entity, &Transform, &mut Actor), (With<Billboard>, Without<Item>)>,
     mut weapon_query: Query<&mut WeaponSprite>,
-    mut cvars: ResMut<CVarRegistry>,
-    mut stats: ResMut<PlayerStats>,
-    actor_definitions: Res<ActorDefinitions>,
+    weapon_definitions: Res<WeaponDefinitions>,
+    cvars: Res<CVarRegistry>,
+    asset_server: Res<AssetServer>,
+    combat_audio: Res<CombatAudio>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Ok(camera_transform) = camera_query.single() else {
+    let Ok((camera_entity, camera_transform)) = camera_query.single() else {
         return;
     };
 
     for mut weapon in weapon_query.iter_mut() {
-        // Only check collision once during the swing phase
-        if !weapon.is_swinging || weapon.collision_checked {
+        // Only check collision when the attack state indicates hit detection is active
+        if !weapon.attack_state.is_hit_active() {
             continue;
         }
 
-        let progress = weapon.swing_timer.fraction();
-        let windup_end = cvars.get_f32("weapon.windup_end");
-        let swing_end = cvars.get_f32("weapon.swing_end");
+        // Get weapon definition with current CVar values
+        let Some(weapon_def) = weapon_definitions.get_with_cvars(&weapon.weapon_type, &cvars)
+        else {
+            continue;
+        };
 
-        // Check collision during the thrust phase (when weapon is extended)
-        // We'll check at about 50% through the thrust phase for best timing
-        let thrust_check_point = windup_end + (swing_end - windup_end) * 0.5;
+        // Get camera position and forward direction
+        let camera_pos = camera_transform.translation;
+        let forward = camera_transform.forward().as_vec3();
 
-        if progress >= thrust_check_point && !weapon.collision_checked {
-            weapon.collision_checked = true;
+        // Project forward direction to XY plane and normalize
+        let forward_xy = Vec2::new(forward.x, forward.y).normalize_or_zero();
 
-            // Get camera position and forward direction
-            let camera_pos = camera_transform.translation;
-            let forward = camera_transform.forward().as_vec3();
+        // Use weapon-specific hitbox dimensions
+        let check_distance = weapon_def.range;
+        let check_width = weapon_def.hitbox_width / 2.0;
+        let check_height = weapon_def.hitbox_height;
 
-            // Project forward direction to XY plane and normalize
-            let forward_xy = Vec2::new(forward.x, forward.y).normalize_or_zero();
+        // Calculate right vector perpendicular to forward (for width check)
+        let right_xy = Vec2::new(-forward_xy.y, forward_xy.x);
 
-            // Define collision box in front of player
-            let check_distance = 8.0; // How far in front to check
-            let check_width = 4.0; // Width of the collision box (half-width on each side)
-
-            // Calculate right vector perpendicular to forward (for width check)
-            let right_xy = Vec2::new(-forward_xy.y, forward_xy.x);
-
-            // Check all actors (excluding items)
-            let mut hit_any = false;
-
-            for (_entity, actor_transform, mut actor) in actor_query.iter_mut() {
-                let actor_pos = actor_transform.translation;
-                let actor_xy = Vec2::new(actor_pos.x, actor_pos.y);
-
-                // Vector from camera to actor
-                let to_actor = actor_xy - Vec2::new(camera_pos.x, camera_pos.y);
-
-                // Project onto forward direction to get distance along view direction
-                let forward_distance = to_actor.dot(forward_xy);
-
-                // Only check actors in front of player
-                if forward_distance < 0.0 {
-                    continue;
-                }
-
-                // Check if actor is within the collision box
-                // Distance check: is it within reach?
-                if forward_distance > check_distance + 4.0 {
-                    continue;
-                }
-
-                if forward_distance < check_distance - 4.0 {
-                    continue;
-                }
-
-                // Width check: project onto right vector to get lateral distance
-                let lateral_distance = to_actor.dot(right_xy).abs();
-
-                if lateral_distance <= check_width {
-                    hit_any = true;
-
-                    // Get the actor definition to run the on_hit script
-                    if let Some(actor_def) = actor_definitions.actors.get(&actor.actor_type) {
-                        if !actor_def.on_hit.is_empty() {
-                            let output = scripting::process_script_with_actor(
-                                &actor_def.on_hit,
-                                &mut stats,
-                                &mut cvars,
-                                Some(&mut *actor),
-                            );
-                            for line in &output {
-                                println!("{}", line);
-                            }
-                        }
-                    }
-
-                    break;
-                }
+        // Check all actors (excluding items)
+        for (entity, actor_transform, mut actor) in actor_query.iter_mut() {
+            // Skip if already hit during this attack
+            if weapon.hit_entities.contains(&entity) {
+                continue;
             }
 
-            // Print collision status
-            if hit_any {
-                println!("collision!");
+            let actor_pos = actor_transform.translation;
+            let actor_xy = Vec2::new(actor_pos.x, actor_pos.y);
+
+            // Vector from camera to actor
+            let to_actor = actor_xy - Vec2::new(camera_pos.x, camera_pos.y);
+
+            // Project onto forward direction to get distance along view direction
+            let forward_distance = to_actor.dot(forward_xy);
+
+            // Only check actors in front of player
+            if forward_distance < 0.0 {
+                continue;
+            }
+
+            // Check if actor is within the collision box
+            // Distance check: is it within reach?
+            if forward_distance > check_distance + actor.scale {
+                continue;
+            }
+
+            // Width check: project onto right vector to get lateral distance
+            let lateral_distance = to_actor.dot(right_xy).abs();
+
+            if lateral_distance > check_width + actor.scale {
+                continue;
+            }
+
+            // Z-axis height check (world uses Z+ as up)
+            let height_difference = (actor_pos.z - camera_pos.z).abs();
+            if height_difference > check_height {
+                continue;
+            }
+
+            // Actor is within hitbox - calculate and apply damage
+            weapon.hit_entities.insert(entity);
+
+            // Calculate charge ratio (normalized by weapon's max charge time)
+            let charge_ratio = (weapon.charge_progress / weapon_def.max_charge_time).min(1.0);
+
+            // Get target resistance based on damage type
+            let resistance = match weapon_def.damage_type {
+                combat::DamageType::Physical => actor.physical_resistance,
+                combat::DamageType::Fire => actor.fire_resistance,
+                combat::DamageType::Ice => actor.ice_resistance,
+                combat::DamageType::Poison => actor.poison_resistance,
+            };
+
+            // Calculate damage
+            let damage_result =
+                combat::calculate_damage(&weapon_def, charge_ratio, actor.armor, resistance);
+
+            // Apply damage
+            actor.health -= damage_result.amount as f32;
+
+            // Spawn visual feedback
+            // Camera shake
+            if damage_result.critical {
+                commands
+                    .entity(camera_entity)
+                    .insert(combat::CameraShake::critical_shake());
             } else {
-                println!("no collision");
+                commands
+                    .entity(camera_entity)
+                    .insert(combat::CameraShake::hit_shake());
+            }
+
+            // Blood particles
+            spawn_blood_particles(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                actor_pos,
+                if damage_result.critical { 10 } else { 5 },
+            );
+
+            // Damage number
+            spawn_damage_number(
+                &mut commands,
+                &asset_server,
+                actor_pos,
+                damage_result.amount,
+                damage_result.critical,
+            );
+
+            // Play hit sound
+            play_hit_sound(&mut commands, &combat_audio, damage_result.critical);
+
+            // Apply status effect based on damage type
+            apply_status_effect(
+                &mut commands,
+                entity,
+                damage_result.damage_type,
+                &actor.actor_type,
+            );
+
+            // Print hit feedback
+            if damage_result.critical {
+                println!(
+                    "CRITICAL HIT! {} damage to {} (health: {:.0}/{:.0})",
+                    damage_result.amount, actor.actor_type, actor.health, actor.max_health
+                );
+            } else {
+                println!(
+                    "Hit {} for {} damage (health: {:.0}/{:.0})",
+                    actor.actor_type, damage_result.amount, actor.health, actor.max_health
+                );
             }
         }
     }
@@ -555,6 +648,7 @@ fn spawn_weapon_sprite(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     asset_server: &Res<AssetServer>,
     camera_entity: Entity,
+    weapon_definitions: &WeaponDefinitions,
     cvars: &CVarRegistry,
 ) {
     use bevy::asset::RenderAssetUsages;
@@ -595,14 +689,13 @@ fn spawn_weapon_sprite(
     weapon_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     weapon_mesh.insert_indices(Indices::U32(vec![0, 1, 2, 0, 2, 3]));
 
-    // Spawn weapon as child of camera
-    // Position it to the right and lower on screen
-    // Close to camera to ensure it renders on top
-    let rest_pos = Vec3::new(
-        cvars.get_f32("weapon.rest_pos_x"),
-        cvars.get_f32("weapon.rest_pos_y"),
-        cvars.get_f32("weapon.rest_pos_z"),
-    );
+    // Get default weapon (sword) rest position from weapon definition
+    let default_weapon_type = "sword";
+    let weapon_def = weapon_definitions
+        .get_with_cvars(default_weapon_type, cvars)
+        .expect("Failed to load default weapon definition");
+
+    let rest_pos = weapon_def.rest_keyframe.position;
 
     let weapon_entity = commands
         .spawn((
