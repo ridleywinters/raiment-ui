@@ -50,6 +50,7 @@ dev-test:
 
 # Tests all projects
 test: build
+    @just run-foreach "source/cmd" test
     @just run-foreach "source/modules" test
 
 #==============================================================================

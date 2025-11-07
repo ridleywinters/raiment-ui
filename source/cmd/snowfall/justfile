@@ -9,5 +9,8 @@ dev:
 build: 
     cargo build
 
+test:
+    echo "TODO"
+
 run:
     cargo run
