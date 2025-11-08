@@ -1,7 +1,6 @@
 /// Camera shake effect system
 ///
 /// Provides camera shake visual feedback for combat actions and other events.
-
 use bevy::prelude::*;
 
 /// Component for camera shake effect
