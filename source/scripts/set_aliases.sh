@@ -42,3 +42,10 @@ function gcap() {
     popd > /dev/null
 }
 
+#==============================================================================
+# scratch (create a temporary scratch file and open it in code-insiders)
+#==============================================================================
+
+function scratch() {
+  $REPO_ROOT/source/scripts/create_scratch_entry.ts
+}

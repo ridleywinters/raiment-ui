@@ -6,6 +6,8 @@ import { dirname } from "./dirname.ts";
 import { exec } from "./exec.ts";
 import { expandEnvVars } from "./expand_env_vars.ts";
 import { fetchExists } from "./fetch_exists.ts";
+import { which } from "./which.ts";
+import { exists } from "./exists.ts";
 import { fetchText } from "./fetch_text.ts";
 import { glob } from "./glob.ts";
 import { mkdir } from "./mkdir.ts";
@@ -40,6 +42,8 @@ export const sh = {
     normalize,
     abspath,
     relative,
+    exists,
+    which,
 
     // Network
     fetchText,

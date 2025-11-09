@@ -3,6 +3,7 @@
 ## TODO
 
 - [ ] Dungeon tool -> loadable maps
+- [ ] Move asset generation into this folder (it is game specific)
 
 ## Design goals
 
