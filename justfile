@@ -59,13 +59,15 @@ test: build
 
 pull-subtree:
     @echo "Pulling subtrees..."
-    git subtree pull --prefix=source/modules/raiment-core-test raiment-core-test main --squash
     git subtree pull --prefix=source/modules/raiment-devenv raiment-devenv main --squash
-
+    git subtree pull --prefix=source/modules/raiment-core raiment-core main --squash
+    git subtree pull --prefix=source/modules/raiment-ui raiment-ui main --squash
+    
 push-subtree:
-    @echo "Pushing subtrees..."
-    git subtree push --prefix=source/modules/raiment-core-test raiment-core-test main
+    @echo "Pushing subtrees..."    
     git subtree push --prefix=source/modules/raiment-devenv raiment-devenv main
+    git subtree push --prefix=source/modules/raiment-core raiment-core main
+    git subtree push --prefix=source/modules/raiment-ui raiment-ui main
 
 sync-subtree:
     @just pull-subtree
