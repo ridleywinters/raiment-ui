@@ -151,7 +151,7 @@ done
 
 
 git remote add raiment-devenv git@github.com:ridleywinters/raiment-devenv.git 2> /dev/null || true
-git subtree add --prefix=source/modules/raiment-devenv lib main --squash
+git subtree add --prefix=source/modules/raiment-devenv raiment-devenv main --squash
 
 #==============================================================================
 # Aliases and tools
