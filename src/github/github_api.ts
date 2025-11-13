@@ -1,5 +1,5 @@
 import React from "react";
-import { navigateToSignIn, navigateToSignOut, AuthState } from "./internal.ts";
+import { AuthState, navigateToSignIn, navigateToSignOut } from "./internal.ts";
 
 export class GitHubAPI {
     _token: string | null;
@@ -38,12 +38,16 @@ export class GitHubAPI {
     useUser() {
         const [user, setUser] = React.useState<any>(null);
         React.useEffect(() => {
+            if (!this.token) {
+                setUser(null);
+                return;
+            }
             const go = async () => {
                 const user = await this.user();
                 setUser(user);
             };
             go();
-        }, []);
+        }, [this.token]);
         return user;
     }
 
