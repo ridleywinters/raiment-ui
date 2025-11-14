@@ -460,6 +460,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
         (m) => `border-style: ${m[1]};`,
     ],
     [
+        /border-(bottom|top|left|right)-(none|solid|dashed|dotted)-#([0-9A-Za-z]+)/,
+        (m) => `border-${m[1]}: 1px ${m[2]} #${m[3]};`,
+    ],
+    [
         /border-(bottom|top|left|right)-#([0-9A-Za-z]+)/,
         (m) => `border-${m[1]}: 1px solid #${m[2]};`,
     ],

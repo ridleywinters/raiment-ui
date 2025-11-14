@@ -15,14 +15,14 @@ export function handleKeyMapping<
     table: KeyMappingTable<T>,
 ): void {
     let key = evt.key;
-    if (evt.ctrlKey) {
-        key = `Ctrl+${key}`;
+    if (evt.shiftKey) {
+        key = `Shift+${key}`;
     }
     if (evt.altKey || evt.metaKey) {
         key = `Alt+${key}`;
     }
-    if (evt.shiftKey) {
-        key = `Shift+${key}`;
+    if (evt.ctrlKey) {
+        key = `Ctrl+${key}`;
     }
 
     const tableKeys = Object.keys(table);
@@ -47,5 +47,7 @@ export function handleKeyMapping<
             evt.stopPropagation();
         }
         handler(evt);
+    } else {
+        console.log("No handler for key:", key);
     }
 }
