@@ -35,7 +35,7 @@ export class GitHubAPI {
     // State hooks
     //=========================================================================
 
-    useUser() {
+    useProfile() {
         const [user, setUser] = React.useState<any>(null);
         React.useEffect(() => {
             if (!this.token) {
@@ -62,7 +62,8 @@ export class GitHubAPI {
     async repositoryExists(repositoryName: string): Promise<boolean> {
         const user = await this.user();
         const username = user.login;
-        const url = `https://api.github.com/repos/${username}/${repositoryName}`;
+        const url =
+            `https://api.github.com/repos/${username}/${repositoryName}`;
         try {
             const resp = await this._fetchRaw("GET", url);
             return resp.status === 200 ? true : false;
@@ -71,12 +72,18 @@ export class GitHubAPI {
         }
     }
 
-    async createRepository(repositoryName: string): Promise<void> {
+    async createRepository(repositoryName: string, {
+        privateRepo,
+    }: {
+        privateRepo: boolean;
+    } = {
+        privateRepo: false,
+    }): Promise<void> {
         const url = `https://api.github.com/user/repos`;
         const params = {
             name: repositoryName,
             description: "Guidebook data repository",
-            private: false,
+            private: privateRepo,
             has_issues: false,
             has_projects: false,
             has_wiki: false,
@@ -86,10 +93,14 @@ export class GitHubAPI {
         await this.fetch("POST", url, params);
     }
 
-    async readFileContents(repo: string, filename: string): Promise<string | null> {
+    async readFileContents(
+        repo: string,
+        filename: string,
+    ): Promise<string | null> {
         const user = await this.user();
         const username = user.login;
-        const url = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
+        const url =
+            `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
 
         const existing = await this.fetch("GET", url);
         if (!existing) {
@@ -113,7 +124,8 @@ export class GitHubAPI {
         this._updateTimers[filename] = globalThis.setTimeout(async () => {
             const user = await this.user();
             const username = user.login;
-            const url = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
+            const url =
+                `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
 
             let sha;
             {
@@ -170,7 +182,11 @@ export class GitHubAPI {
     // Internal helpers
     //=========================================================================
 
-    async _fetchRaw(method: string, url: string, body: any = null): Promise<Response> {
+    async _fetchRaw(
+        method: string,
+        url: string,
+        body: any = null,
+    ): Promise<Response> {
         return await fetch(url, {
             method,
             headers: {
