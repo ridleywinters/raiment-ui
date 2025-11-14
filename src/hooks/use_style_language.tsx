@@ -252,6 +252,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
         () => "display: flex; flex-direction: row; align-items: center;",
     ],
     [
+        /flex-row-(start|end)/,
+        (m) => `display: flex; flex-direction: row; align-items: flex-${m[1]};`,
+    ],
+    [
         "flex-col",
         () => "display: flex; flex-direction: column;",
     ],

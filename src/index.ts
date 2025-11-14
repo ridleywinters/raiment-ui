@@ -6,6 +6,7 @@ export * from "./github/use_github_api.ts";
 export * from "./github/use_github_auth.ts";
 export * from "./hooks/use_css.ts";
 export * from "./hooks/use_event_listener.ts";
+export * from "./hooks/use_global_key_mapping.ts";
 export * from "./hooks/use_local_storage.ts";
 export * from "./hooks/use_server_side_events.ts";
 export * from "./hooks/use_style_language.tsx";
