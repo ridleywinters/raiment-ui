@@ -48,6 +48,6 @@ export function handleKeyMapping<
         }
         handler(evt);
     } else {
-        console.log("No handler for key:", key);
+        // console.log("No handler for key:", key);
     }
 }
