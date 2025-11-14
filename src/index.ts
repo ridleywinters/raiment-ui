@@ -10,4 +10,5 @@ export * from "./hooks/use_local_storage.ts";
 export * from "./hooks/use_server_side_events.ts";
 export * from "./hooks/use_style_language.tsx";
 export * from "./hooks/use_throttled_callback.ts";
+export * from "./hooks/use_url_change_listener.tsx";
 export * from "./util/css.ts";
