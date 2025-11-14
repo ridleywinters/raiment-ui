@@ -36,10 +36,10 @@ function handleKeyMapping<T>(
     table: KeyMappingTable<T>,
 ): void {
     let key = evt.key;
-    if (evt.ctrlKey || evt.metaKey) {
+    if (evt.ctrlKey) {
         key = `Ctrl+${key}`;
     }
-    if (evt.altKey) {
+    if (evt.altKey || evt.metaKey) {
         key = `Alt+${key}`;
     }
     if (evt.shiftKey) {
