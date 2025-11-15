@@ -244,6 +244,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     //-------------------------------------------------------------------------
 
     [
+        "flex",
+        () => "display: flex;",
+    ],
+    [
         "flex-row",
         () => "display: flex; flex-direction: row;",
     ],
