@@ -408,6 +408,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
         /text-(left|center|right|justify)/,
         (m) => `text-align: ${m[1]};`,
     ],
+    [
+        "no-wrap",
+        () => "white-space: nowrap;",
+    ],
 
     //-------------------------------------------------------------------------
     // Cursor
