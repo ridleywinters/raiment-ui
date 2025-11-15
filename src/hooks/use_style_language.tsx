@@ -233,6 +233,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
         /(border-box|content-box)/,
         (m) => `box-sizing: ${m[1]};`,
     ],
+    [
+        /overflow-(auto|hidden|visible|scroll)/,
+        (m) => `overflow: ${m[1]};`,
+    ],
 
     //-------------------------------------------------------------------------
     // Flexbox
@@ -439,7 +443,7 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
         (m) => `&:hover { color: #${m[1]}; }`,
     ],
     [
-        /bg-(white|black|red|green|blue)/,
+        /bg-(white|black|red|green|blue|transparent)/,
         (m) => `background-color: ${m[1]};`,
     ],
     [
@@ -478,6 +482,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     [
         /border-(width|radius)-([0-9]+)/,
         (m) => `border-${m[1]}: ${m[2]}px;`,
+    ],
+    [
+        "outline-none",
+        () => "outline: none;",
     ],
 
     //-------------------------------------------------------------------------
