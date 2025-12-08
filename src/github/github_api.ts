@@ -62,8 +62,7 @@ export class GitHubAPI {
     async repositoryExists(repositoryName: string): Promise<boolean> {
         const user = await this.user();
         const username = user.login;
-        const url =
-            `https://api.github.com/repos/${username}/${repositoryName}`;
+        const url = `https://api.github.com/repos/${username}/${repositoryName}`;
         try {
             const resp = await this._fetchRaw("GET", url);
             return resp.status === 200 ? true : false;
@@ -99,15 +98,14 @@ export class GitHubAPI {
     ): Promise<string | null> {
         const user = await this.user();
         const username = user.login;
-        const url =
-            `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
+        const url = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
 
         const existing = await this.fetch("GET", url);
         if (!existing) {
             return null;
         }
         const encoded = existing.content;
-        const content = atob(encoded);
+        const content = fromBase64Utf8(encoded);
         return content;
     }
 
@@ -124,8 +122,7 @@ export class GitHubAPI {
         this._updateTimers[filename] = globalThis.setTimeout(async () => {
             const user = await this.user();
             const username = user.login;
-            const url =
-                `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
+            const url = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
 
             let sha;
             {
@@ -136,7 +133,7 @@ export class GitHubAPI {
             }
 
             // Base64 encode the content
-            const encoded = btoa(content);
+            const encoded = toBase64Utf8(content);
             this.fetch("PUT", url, {
                 message: "update via guidebook API",
                 committer: {
@@ -198,4 +195,19 @@ export class GitHubAPI {
             body: body ? JSON.stringify(body) : undefined,
         });
     }
+}
+
+function toBase64Utf8(str: string): string {
+    const utf8 = new TextEncoder().encode(str); // Uint8Array of UTF-8 bytes
+    let binary = "";
+    for (const b of utf8) {
+        binary += String.fromCharCode(b);
+    }
+    return btoa(binary);
+}
+
+function fromBase64Utf8(b64: string): string {
+    const binary = atob(b64.replace(/\s/g, ""));
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes); // back to JS string
 }
