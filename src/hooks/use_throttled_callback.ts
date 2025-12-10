@@ -9,16 +9,17 @@ import React from "react";
 export function useThrottledCallback<T extends (...args: any[]) => void>(
     callback: T,
     delay: number,
+    deps: React.DependencyList = [],
 ): T {
     type State = {
         timeout: number | null;
         prevCall: number;
-        pendingArgs: any[] | null;
+        pendingArgs: any[];
     };
     const stateRef = React.useRef<State>({
         timeout: null,
         prevCall: 0,
-        pendingArgs: null,
+        pendingArgs: [],
     });
 
     return React.useCallback((...args: any[]) => {
@@ -33,7 +34,7 @@ export function useThrottledCallback<T extends (...args: any[]) => void>(
         // Enough time has passed, call immediately
         if (timeDelta >= delay) {
             state.prevCall = now;
-            state.pendingArgs = null;
+            state.pendingArgs = [];
             callback(...args);
             return;
         }
@@ -64,8 +65,8 @@ export function useThrottledCallback<T extends (...args: any[]) => void>(
         const actualDelay = delay - timeDelta;
         state.timeout = setTimeout(() => {
             state.prevCall = Date.now();
-            state.pendingArgs = null;
-            callback(...state.pendingArgs!);
+            state.pendingArgs = [];
+            callback(...state.pendingArgs);
         }, actualDelay);
-    }, [callback, delay]) as T;
+    }, [callback, delay, ...deps]) as T;
 }
