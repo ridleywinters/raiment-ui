@@ -10,10 +10,19 @@ export class GitHubAPI {
         this._token = token;
         this._authState = authState;
     }
+    //-------------------------------------------------------------------------
+    // Properties
+    //-------------------------------------------------------------------------
 
-    //=========================================================================
+    async repositoryURL(repositoryName: string): Promise<string> {
+        const user = await this.user();
+        const username = user.login;
+        return `https://github.com/${username}/${repositoryName}`;
+    }
+
+    //-------------------------------------------------------------------------
     // Sign-in / Sign-out
-    //=========================================================================
+    //-------------------------------------------------------------------------
 
     get token(): string | null {
         return this._token;
@@ -31,9 +40,9 @@ export class GitHubAPI {
         navigateToSignOut();
     }
 
-    //=========================================================================
+    //-------------------------------------------------------------------------
     // State hooks
-    //=========================================================================
+    //-------------------------------------------------------------------------
 
     useProfile() {
         const [user, setUser] = React.useState<any>(null);
@@ -51,9 +60,9 @@ export class GitHubAPI {
         return user;
     }
 
-    //=========================================================================
+    //-------------------------------------------------------------------------
     // API wrappers
-    //=========================================================================
+    //-------------------------------------------------------------------------
 
     async user() {
         return this.cacheFetch("user", `https://api.github.com/user`);
@@ -146,6 +155,43 @@ export class GitHubAPI {
 
             this._updateTimers[filename] = undefined;
         }, delay);
+    }
+
+    async uploadFile(
+        repo: string,
+        filename: string,
+        blob: Blob,
+    ): Promise<void> {
+        const user = await this.user();
+        const username = user.login;
+        const url = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
+
+        let sha;
+        {
+            const existing = await this.fetch("GET", url);
+            if (existing) {
+                sha = existing.sha;
+            }
+        }
+
+        // Convert blob to base64
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        let binary = "";
+        for (const b of uint8Array) {
+            binary += String.fromCharCode(b);
+        }
+        const encoded = btoa(binary);
+
+        await this.fetch("PUT", url, {
+            message: "upload attachment via guidebook API",
+            committer: {
+                name: "guidebook-app",
+                email: "support@raiment-studios.com",
+            },
+            content: encoded,
+            sha: sha,
+        });
     }
 
     //=========================================================================
