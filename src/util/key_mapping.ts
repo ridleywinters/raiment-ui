@@ -31,18 +31,23 @@ export function handleKeyMapping<
     const tableKeys = Object.keys(table);
     let handler = undefined;
     let stopEvent = true;
-    for (let i = 0; i < tableKeys.length; i++) {
-        const originalKey = tableKeys[i];
-        let k = originalKey;
-        if (k.endsWith("?")) {
-            k = k.slice(0, -1);
-            stopEvent = false;
+    for (let i = 0; handler === undefined && i < tableKeys.length; i++) {
+        const baseKey = tableKeys[i];
+        const baseHandler = table[baseKey];
+
+        const subkeys = baseKey.split(",").map((s) => s.trim());
+
+        for (let k of subkeys) {
+            if (k.endsWith("?")) {
+                k = k.slice(0, -1);
+                stopEvent = false;
+            }
+            if (k !== key) {
+                continue;
+            }
+            handler = baseHandler;
+            break;
         }
-        if (k !== key) {
-            continue;
-        }
-        handler = table[originalKey];
-        break;
     }
     if (handler) {
         if (stopEvent) {
