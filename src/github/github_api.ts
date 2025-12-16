@@ -119,6 +119,7 @@ export class GitHubAPI {
     }
 
     _updateTimers: Record<string, number | undefined> = {};
+    _updateCount = 0;
 
     async updateFileContents(
         repo: string,
@@ -163,11 +164,14 @@ export class GitHubAPI {
             const reset = rawResp.headers.get("x-ratelimit-reset");
             const resetDate = reset ? new Date(parseInt(reset) * 1000) : null;
             const resetPretty = resetDate ? resetDate.toLocaleString() : "unknown";
-            console.log(
-                `GitHub API rate limit: ${remaining}/${limit}, resets at ${resetPretty}`,
-            );
+            if (this._updateCount % 20 === 0 || !(parseInt(remaining ?? "", 10) >= 100)) {
+                console.log(
+                    `GitHub API rate limit: ${remaining}/${limit}, resets at ${resetPretty}`,
+                );
+            }
 
             this._updateTimers[filename] = undefined;
+            this._updateCount += 1;
         }, delay);
     }
 
