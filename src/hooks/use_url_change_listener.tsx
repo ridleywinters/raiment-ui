@@ -9,7 +9,9 @@ import React from "react";
 export function useURLChangeListener(callback?: (url: URL) => void): URL {
     const PATCH_ID = "data-use-url-listener-patch";
 
-    const [url, setURL] = React.useState<URL>(new URL(globalThis.location.href));
+    const [url, setURL] = React.useState<URL>(
+        new URL(globalThis.location.href),
+    );
 
     React.useEffect(() => {
         const handler = (...args: any[]) => {
@@ -43,6 +45,9 @@ export function useURLChangeListener(callback?: (url: URL) => void): URL {
         globalThis.addEventListener("hashchange", handler);
         globalThis.addEventListener("patched-pushstate", handler);
         globalThis.addEventListener("patched-replacestate", handler);
+
+        // Call the handler with the initial URL as well (and then changes to it)
+        handler();
 
         return () => {
             globalThis.removeEventListener("popstate", handler);
