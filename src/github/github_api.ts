@@ -1,6 +1,27 @@
 import React from "react";
 import { AuthState, navigateToSignIn, navigateToSignOut } from "./internal.ts";
 
+export type GitHubContentItem = {
+    name: string;
+    path: string;
+    sha: string;
+    size: number;
+    url: string;
+    html_url: string;
+    git_url: string;
+    download_url: string | null;
+    type: "file" | "dir" | "symlink" | "submodule";
+    _links: {
+        self: string;
+        git: string;
+        html: string;
+    };
+};
+
+/**
+ * Wrapper on the GitHUB REST API that provides a simplified interface into
+ * an API subset.
+ */
 export class GitHubAPI {
     _token: string | null;
     _authState: AuthState;
@@ -116,6 +137,37 @@ export class GitHubAPI {
         const encoded = existing.content;
         const content = fromBase64Utf8(encoded);
         return content;
+    }
+
+    async readFolderContents(
+        repo: string,
+        folderPath: string = "",
+    ): Promise<GitHubContentItem[] | null> {
+        const user = await this.user();
+        const username = user.login;
+        const url = `https://api.github.com/repos/${username}/${repo}/contents/${folderPath}`;
+
+        const response = await this.fetch("GET", url);
+        if (!response) {
+            return null;
+        }
+
+        if (Array.isArray(response)) {
+            return response as GitHubContentItem[];
+        }
+
+        return null;
+    }
+
+    async readFolderFiles(
+        repo: string,
+        folderPath: string = "",
+    ): Promise<GitHubContentItem[] | null> {
+        const contents = await this.readFolderContents(repo, folderPath);
+        if (!contents) {
+            return null;
+        }
+        return contents.filter((item) => item.type === "file");
     }
 
     _updateTimers: Record<string, number | undefined> = {};

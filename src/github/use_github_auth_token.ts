@@ -4,23 +4,23 @@ import { AuthState, CLIENT_ID, DEBUG_AUTH, GUIDEBOOK_AUTH_SERVER } from "./inter
 const dbg = DEBUG_AUTH ? (...args: any[]) => console.log("DEBUG:", ...args) : () => {};
 
 export type GitHubAuthState = {
-    accessToken : string | null;
-    authState : AuthState;
+    accessToken: string | null;
+    authState: AuthState;
 };
 
 /**
  * Returns the current GitHub auth token is the user is authenticated.
  * If not, it will be null.
- * 
+ *
  * See GitHubAPI.signIn() for initiating the sign-in process.
  * See GitHubAPI.signOut() for signing out.
  */
 export function useGitHubAuthToken(): GitHubAuthState {
     const current = localStorage.getItem("github_auth/access_token") ?? null;
     const [authState, setAuthState] = React.useState<GitHubAuthState>({
-        accessToken : current,
-        authState : current ? "authenticated" : "unauthenticated",
-});
+        accessToken: current,
+        authState: current ? "authenticated" : "unauthenticated",
+    });
     dbg("current access token:", authState.accessToken);
 
     React.useEffect(() => {
@@ -91,13 +91,16 @@ export function useGitHubAuthToken(): GitHubAuthState {
                     return;
                 }
 
+                // Storing the access token in localStorage means this exposed to XSS
+                // attacks. A deliberate trade-off is being made here between security risk
+                // and user experience (i.e. convenience for the user).
                 dbg("Received access token", json);
                 localStorage.setItem("github_auth/access_token", json.access_token);
                 scrubURL();
-                setAuthState({
+                setAuthState(() => ({
                     accessToken: json.access_token,
                     authState: "authenticated",
-                });
+                }));
             };
             go();
         }
@@ -118,7 +121,7 @@ function scrubURL(): void {
     scrubbed.searchParams.delete("state");
 
     const current = globalThis.location.href;
-    const next = scrubbed.href
+    const next = scrubbed.href;
     if (current === next) {
         return;
     }
