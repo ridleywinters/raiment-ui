@@ -181,50 +181,53 @@ export class GitHubAPI {
     ): Promise<void> {
         globalThis.clearTimeout(this._updateTimers[filename]);
 
-        this._updateTimers[filename] = globalThis.setTimeout(async () => {
-            const user = await this.user();
-            const username = user.login;
-            const url = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
+        return new Promise<void>((resolve, reject) => {
+            this._updateTimers[filename] = globalThis.setTimeout(async () => {
+                const user = await this.user();
+                const username = user.login;
+                const url = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
 
-            let sha;
-            {
-                const existing = await this.fetch("GET", url);
-                if (existing) {
-                    sha = existing.sha;
+                let sha;
+                {
+                    const existing = await this.fetch("GET", url);
+                    if (existing) {
+                        sha = existing.sha;
+                    }
                 }
-            }
 
-            // Base64 encode the content
-            const encoded = toBase64Utf8(content);
-            const resp = this._fetchRaw("PUT", url, {
-                message: "update via guidebook API",
-                committer: {
-                    name: "guidebook-app",
-                    email: "support@raiment-studios.com",
-                },
-                content: encoded,
-                sha: sha,
-            });
+                // Base64 encode the content
+                const encoded = toBase64Utf8(content);
+                const resp = this._fetchRaw("PUT", url, {
+                    message: "update via guidebook API",
+                    committer: {
+                        name: "guidebook-app",
+                        email: "support@raiment-studios.com",
+                    },
+                    content: encoded,
+                    sha: sha,
+                });
 
-            // Get the x-rate-limit headers and print them for debugging
-            // x-ratelimit-limit: The total number of requests allowed.
-            // x-ratelimit-remaining: The number of requests remaining in the current hour.
-            // x-ratelimit-reset: The time at which the current rate limit window resets, in UTC epoch seconds.
-            const rawResp = await resp;
-            const limit = rawResp.headers.get("x-ratelimit-limit");
-            const remaining = rawResp.headers.get("x-ratelimit-remaining");
-            const reset = rawResp.headers.get("x-ratelimit-reset");
-            const resetDate = reset ? new Date(parseInt(reset) * 1000) : null;
-            const resetPretty = resetDate ? resetDate.toLocaleString() : "unknown";
-            if (this._updateCount % 20 === 0 || !(parseInt(remaining ?? "", 10) >= 100)) {
-                console.log(
-                    `GitHub API rate limit: ${remaining}/${limit}, resets at ${resetPretty}`,
-                );
-            }
+                // Get the x-rate-limit headers and print them for debugging
+                // x-ratelimit-limit: The total number of requests allowed.
+                // x-ratelimit-remaining: The number of requests remaining in the current hour.
+                // x-ratelimit-reset: The time at which the current rate limit window resets, in UTC epoch seconds.
+                const rawResp = await resp;
+                const limit = rawResp.headers.get("x-ratelimit-limit");
+                const remaining = rawResp.headers.get("x-ratelimit-remaining");
+                const reset = rawResp.headers.get("x-ratelimit-reset");
+                const resetDate = reset ? new Date(parseInt(reset) * 1000) : null;
+                const resetPretty = resetDate ? resetDate.toLocaleString() : "unknown";
+                if (this._updateCount % 20 === 0 || !(parseInt(remaining ?? "", 10) >= 100)) {
+                    console.log(
+                        `GitHub API rate limit: ${remaining}/${limit}, resets at ${resetPretty}`,
+                    );
+                }
 
-            this._updateTimers[filename] = undefined;
-            this._updateCount += 1;
-        }, delay);
+                this._updateTimers[filename] = undefined;
+                this._updateCount += 1;
+                resolve();
+            }, delay);
+        });
     }
 
     async uploadFile(
