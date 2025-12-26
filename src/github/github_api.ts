@@ -290,7 +290,9 @@ export class GitHubAPI {
             return cached;
         }
         const json = await this.fetch("GET", url);
-        this._cache[cacheKey] = json;
+        if (json !== null) {
+            this._cache[cacheKey] = json;
+        }
         return json;
     }
 
