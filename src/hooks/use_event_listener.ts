@@ -12,7 +12,7 @@ import React from "react";
  * can be used, for example, in a dependency array to trigger other effects.
  */
 export function useEventListener<S extends Record<string, any>>(
-    emitter: EventEmitter<S> | undefined,
+    emitter: EventEmitter<S> | null | undefined,
     eventNamesParam: keyof S | (keyof S)[],
     callback?: () => void,
 ): number {
