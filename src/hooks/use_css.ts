@@ -50,7 +50,9 @@ function useCSS(scope: "global" | "local", cssString: string | undefined): strin
         if (el) {
             el.dataset.count = `${parseInt(el.dataset.count ?? "0") + 1}`;
         } else {
-            const content = scope === "local" ? `.${className} { ${cssString} }` : cssString;
+            const content = scope === "local"
+                ? transformLocalContent(cssString, className)
+                : cssString;
 
             el = document.createElement("style");
             el.id = id;
@@ -64,6 +66,13 @@ function useCSS(scope: "global" | "local", cssString: string | undefined): strin
     return className;
 }
 
+function transformLocalContent(cssString: string, className: string): string {
+    let text = cssString;
+    if (text.match(/^\s*\.self\s+{/m) && text.match(/}\s*$/m)) {
+        text = text.replace(/^\s*\.self\s+{/, "").replace(/}\s*$/m, "");
+    }
+    return `.${className} { ${text} }`;
+}
 
 export function useCSSLocal(cssString: string | undefined): string {
     return useCSS("local", cssString);
@@ -72,4 +81,3 @@ export function useCSSLocal(cssString: string | undefined): string {
 export function useCSSGlobal(cssString: string | undefined): string {
     return useCSS("global", cssString);
 }
-
