@@ -1,9 +1,17 @@
-export * from "./components/elements.tsx";
+export * from "./components/anchor.tsx";
+export * from "./components/button.tsx";
+export * from "./components/div.tsx";
+export * from "./components/element.tsx";
 export * from "./components/input.tsx";
+export * from "./components/span.tsx";
+export * from "./components/textarea.tsx";
+
 export * from "./dom/invoke_download.ts";
+
 export * from "./github/github_api.ts";
 export * from "./github/use_github_api.ts";
 export * from "./github/use_github_auth.ts";
+
 export * from "./hooks/use_css.ts";
 export * from "./hooks/use_event_listener.ts";
 export * from "./hooks/use_global_key_mapping.ts";
@@ -12,4 +20,5 @@ export * from "./hooks/use_server_side_events.ts";
 export * from "./hooks/use_style_language.tsx";
 export * from "./hooks/use_throttled_callback.ts";
 export * from "./hooks/use_url_change_listener.tsx";
+
 export * from "./util/css.ts";

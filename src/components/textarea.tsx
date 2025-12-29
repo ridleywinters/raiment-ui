@@ -2,20 +2,20 @@ import React, { JSX } from "react";
 import { Element, TagProps } from "./element.tsx";
 import { handleKeyMapping, KeyMappingTable } from "../util/key_mapping.ts";
 
-type InputProps =
-    & Omit<TagProps<"input">, "tag">
+type TextareaProps =
+    & Omit<TagProps<"textarea">, "tag">
     & {
-        onKeyMap?: KeyMappingTable<React.KeyboardEvent<HTMLInputElement>>;
+        onKeyMap?: KeyMappingTable<React.KeyboardEvent<HTMLTextAreaElement>>;
     };
 
-export function Input(
+export function Textarea(
     {
         onKeyDown,
         onKeyMap,
         ...rest
-    }: InputProps,
+    }: TextareaProps,
 ): JSX.Element {
-    const handleKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleKeyDown = (evt: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (onKeyMap) {
             handleKeyMapping(evt, onKeyMap);
         }
@@ -23,7 +23,7 @@ export function Input(
     };
     return (
         <Element
-            tag="input"
+            tag="textarea"
             onKeyDown={handleKeyDown}
             {...rest as any}
         />

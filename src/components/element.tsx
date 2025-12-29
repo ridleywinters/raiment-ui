@@ -40,7 +40,7 @@ export function Element<T extends ElementType>({
     );
 }
 
-function createExtendedElement<T extends ElementType>(
+export function createExtendedElement<T extends ElementType>(
     tag: T,
     baseProps: Partial<TagProps<T>> = {},
 ) {
@@ -48,8 +48,3 @@ function createExtendedElement<T extends ElementType>(
         return <Element tag={tag} {...baseProps} {...props as any} />;
     };
 }
-
-export const Div = createExtendedElement("div");
-export const Span = createExtendedElement("span");
-export const Anchor = createExtendedElement("a");
-export const Button = createExtendedElement("button", { type: "button" });
