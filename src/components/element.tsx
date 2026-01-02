@@ -1,5 +1,6 @@
 import React, { ElementType, JSX } from "react";
 import { StyleLanguage, useStyleLanguage } from "../hooks/use_style_language.tsx";
+import { collapseClassName } from "../internal/collapse_class_name.tsx";
 
 export type TagProps<T extends ElementType> =
     & {
@@ -11,6 +12,12 @@ export type TagProps<T extends ElementType> =
     & { [key in `data-${string}`]?: string | number | boolean }
     & React.ComponentPropsWithoutRef<T>;
 
+/**
+ * Generic wrapper on native HTML elements that provides:
+ *
+ * - `sl` prop for "style language" shortcuts (dynamic tailwind-like classes)
+ * - `cl` shortcut for className (string or array of strings)
+ */
 export function Element<T extends ElementType>({
     tag,
     ref,
@@ -22,7 +29,7 @@ export function Element<T extends ElementType>({
 }: TagProps<T>): JSX.Element {
     const Component = tag;
     const slClassName = useStyleLanguage(sl);
-    const clClassName = Array.isArray(cl) ? cl.join(" ") : cl;
+    const clClassName = collapseClassName(cl);
     const computedClass = [slClassName, className, clClassName] //
         .filter((c) => Boolean(c)) //
         .join(" ") ??

@@ -1,3 +1,6 @@
+/**
+ * Intended for use in a click handler to invoke a download of a dynamically generated file.
+ */
 export function invokeDownload(filename: string, content: any, type: "text/plain") {
     const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);

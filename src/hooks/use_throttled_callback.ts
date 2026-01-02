@@ -3,8 +3,12 @@
 import React from "react";
 
 /**
- * Creates a throttled version of a callback that fires at most once every `delay` ms.
- * Ensures the callback is called at least once during continuous input.
+ * Creates a throttled version of a callback that fires at most once every
+ * `delay` ms. Ensures the callback is called at least once during continuous
+ * input.
+ *
+ * NOTE: it does not do anything to prevent the callback from being called after
+ * the component using it has unmounted.
  */
 export function useThrottledCallback<T extends (...args: any[]) => void>(
     callback: T,

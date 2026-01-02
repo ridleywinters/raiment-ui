@@ -8,25 +8,38 @@ type TextareaProps =
     & Omit<TagProps<"textarea">, "tag">
     & {
         onKeyMap?: KeyMappingTable<React.KeyboardEvent<HTMLTextAreaElement>>;
+    }
+    & {
+        variant?: "auto-resize" | "bare";
     };
 
+/**
+ * Wrapper on native HTML element that provides all Element extensions but
+ * also defaults to a variant CSS styling that auto-resizes the textarea.
+ */
 export function Textarea(
     {
+        variant = "auto-resize",
+        className,
         onKeyDown,
         onKeyMap,
-        className,
         ...rest
     }: TextareaProps,
 ): JSX.Element {
-    const localClass = useCSSLocal(css`
-        .self {
-            height: auto;
-            resize: none;
-            min-height: 1lh;
-            max-height: 100vh;
-            field-sizing: content;
-        }
-    `);
+    const localClass = useCSSLocal(
+        variant === "auto-resize"
+            ? css`
+                .self {
+                    height: auto;
+                    resize: none;
+                    min-height: 1lh;
+                    max-height: 100vh;
+                    field-sizing: content;
+                }
+            `
+            : "",
+    );
+    className = [className, localClass].filter(Boolean).join(" ");
 
     const handleKeyDown = (evt: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (onKeyMap) {
@@ -34,8 +47,6 @@ export function Textarea(
         }
         onKeyDown?.(evt);
     };
-
-    className = [className, localClass].filter(Boolean).join(" ");
 
     return (
         <Element

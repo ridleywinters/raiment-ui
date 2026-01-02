@@ -21,7 +21,10 @@ export type StyleLanguage = string | string[] | Record<string, boolean>;
 
 /**
  * Given a "style language" descriptor, generates a unique, global CSS class
- * for that descriptor and returns its class name.
+ * for that descriptor, injects it into the HTML header, and returns its
+ * class name.
+ *
+ * If the exact style already exists in the HTML, it will reuse it.
  *
  * If the style language results in zero styles, it will return an empty string.
  * This is a valid case and does not signal an error.
@@ -31,16 +34,17 @@ export type StyleLanguage = string | string[] | Record<string, boolean>;
  */
 export function useStyleLanguage(sl: StyleLanguage | undefined): string {
     const styleTokens = preprocessStyleLanguage(sl);
+    const styleMerged = styleTokens.join(" ").trim();
 
     const className = React.useMemo(() => {
-        if (styleTokens.length === 0) {
+        if (styleMerged.length === 0) {
             return "";
         }
         // Use a hash, not simply something unique, in order to reuse identical
         // styles.
-        const hash = hashString(styleTokens.join(" "));
+        const hash = hashString(styleMerged);
         return `_SL${hash.toString(32)}`;
-    }, [styleTokens]);
+    }, [styleMerged]);
 
     React.useLayoutEffect(() => {
         // If the className is empty there's nothing to do
@@ -82,7 +86,9 @@ export function useStyleLanguage(sl: StyleLanguage | undefined): string {
 }
 
 /**
- * Reduces the style specification into a flat array of style tokens.
+ * Reduces the style specification into a flat array of the active style tokens.
+ * A "style token" is a single string mapping to a style rule, such as "px8" or
+ * "bg-#ff0000".
  *
  * The input style specification can be provided as a single string,
  * an array of strings, or an object mapping strings (to conditionally
@@ -107,23 +113,38 @@ function preprocessStyleLanguage(sl: StyleLanguage | undefined): string[] {
         .flat();
 }
 
+/**
+ * Transforms the "style tokens" (individual tokens that should match particular
+ * rules) into a well-formed CSS string that can be injected into the HTML.
+ */
 function compileStyleLanguage(className: string, tokens: string[]): string {
     const lines: string[] = [];
 
     for (const token of tokens) {
         let found = false;
-        for (const [regexOrString, fn] of rulesTable()) {
+        for (const [matcher, fn] of rulesTable()) {
             // Check for a match (exact string match or regular expression match)
             // and get the output if there is one.
             let result: string | string[] | undefined;
-            if (typeof regexOrString === "string") {
-                if (token === regexOrString) {
-                    result = fn([""]);
+            switch (typeof matcher) {
+                case "string":
+                    if (token === matcher) {
+                        result = fn([""]);
+                    }
+                    break;
+                case "function": {
+                    const m = matcher(token);
+                    if (m) {
+                        result = fn(m);
+                    }
+                    break;
                 }
-            } else {
-                const m = token.match(regexOrString);
-                if (m) {
-                    result = fn(m);
+                default: {
+                    const m = token.match(matcher);
+                    if (m) {
+                        result = fn(m);
+                    }
+                    break;
                 }
             }
             if (!result) {
@@ -131,6 +152,7 @@ function compileStyleLanguage(className: string, tokens: string[]): string {
             }
 
             // If there was a match, add it to the current class definition.
+            // Note that we implicitly trust result is valid CSS!
             const css = Array.isArray(result) ? result.join("\n") : result;
             lines.push(css);
             found = true;
@@ -174,8 +196,15 @@ function rulesTable(): StyleLanguageRule[] {
 
 type StyleLanguageRule =
     | [RegExp, (m: string[]) => string | string[]]
-    | [string, () => string | string[]];
+    | [string, () => string | string[]]
+    | [(s: string) => string[] | undefined, (m: string[]) => string | string[]];
 
+/**
+ * Table of the dynamic tailwind-like style rules that are supported.
+ *
+ * To keep the rules memorable and easy to learn, they generally should map
+ * very closely to CSS property names and values and/or Tailwind class names.
+ */
 const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     //-------------------------------------------------------------------------
     // Positioning
@@ -439,7 +468,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     ],
 
     [
-        /fg-(white|black|red|green|blue)/,
+        // NOTE: it's a little asymmetic in the design that we support all
+        // named colors for fg- but not for all properties that take colors.
+        // This currently done to avoid bloating the rules table too much.
+        matchNamedColors("fg-"),
         (m) => `color: ${m[1]};`,
     ],
     [
@@ -456,6 +488,10 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
     ],
     [
         /bg-(white|black|red|green|blue|transparent)/,
+        (m) => `background-color: ${m[1]};`,
+    ],
+    [
+        matchNamedColors("bg-"),
         (m) => `background-color: ${m[1]};`,
     ],
     [
@@ -508,3 +544,184 @@ const RULES_TABLE_SOURCE: StyleLanguageRule[] = [
         (m) => `user-select: ${m[1]};`,
     ],
 ];
+
+function matchNamedColors(prefix: string): (s: string) => string[] | undefined {
+    return (s: string): string[] | undefined => {
+        if (!s.startsWith(prefix)) {
+            return undefined;
+        }
+        const color = s.slice(prefix.length).trim();
+        if (!NAMED_CSS_COLORS.has(color)) {
+            return undefined;
+        }
+        return [s, color];
+    };
+}
+
+const NAMED_CSS_COLORS: Set<string> = new Set([
+    "black",
+    "silver",
+    "gray",
+    "white",
+    "maroon",
+    "red",
+    "purple",
+    "fuchsia",
+    "green",
+    "lime",
+    "olive",
+    "yellow",
+    "navy",
+    "blue",
+    "teal",
+    "aqua",
+    "aliceblue",
+    "antiquewhite",
+    "aqua",
+    "aquamarine",
+    "azure",
+    "beige",
+    "bisque",
+    "black",
+    "blanchedalmond",
+    "blue",
+    "blueviolet",
+    "brown",
+    "burlywood",
+    "cadetblue",
+    "chartreuse",
+    "chocolate",
+    "coral",
+    "cornflowerblue",
+    "cornsilk",
+    "crimson",
+    "cyan",
+    "darkblue",
+    "darkcyan",
+    "darkgoldenrod",
+    "darkgray",
+    "darkgreen",
+    "darkgrey",
+    "darkkhaki",
+    "darkmagenta",
+    "darkolivegreen",
+    "darkorange",
+    "darkorchid",
+    "darkred",
+    "darksalmon",
+    "darkseagreen",
+    "darkslateblue",
+    "darkslategray",
+    "darkslategrey",
+    "darkturquoise",
+    "darkviolet",
+    "deeppink",
+    "deepskyblue",
+    "dimgray",
+    "dimgrey",
+    "dodgerblue",
+    "firebrick",
+    "floralwhite",
+    "forestgreen",
+    "fuchsia",
+    "gainsboro",
+    "ghostwhite",
+    "gold",
+    "goldenrod",
+    "gray",
+    "green",
+    "greenyellow",
+    "grey",
+    "honeydew",
+    "hotpink",
+    "indianred",
+    "indigo",
+    "ivory",
+    "khaki",
+    "lavender",
+    "lavenderblush",
+    "lawngreen",
+    "lemonchiffon",
+    "lightblue",
+    "lightcoral",
+    "lightcyan",
+    "lightgoldenrodyellow",
+    "lightgray",
+    "lightgreen",
+    "lightgrey",
+    "lightpink",
+    "lightsalmon",
+    "lightseagreen",
+    "lightskyblue",
+    "lightslategray",
+    "lightslategrey",
+    "lightsteelblue",
+    "lightyellow",
+    "lime",
+    "limegreen",
+    "linen",
+    "magenta",
+    "maroon",
+    "mediumaquamarine",
+    "mediumblue",
+    "mediumorchid",
+    "mediumpurple",
+    "mediumseagreen",
+    "mediumslateblue",
+    "mediumspringgreen",
+    "mediumturquoise",
+    "mediumvioletred",
+    "midnightblue",
+    "mintcream",
+    "mistyrose",
+    "moccasin",
+    "navajowhite",
+    "navy",
+    "oldlace",
+    "olive",
+    "olivedrab",
+    "orange",
+    "orangered",
+    "orchid",
+    "palegoldenrod",
+    "palegreen",
+    "paleturquoise",
+    "palevioletred",
+    "papayawhip",
+    "peachpuff",
+    "peru",
+    "pink",
+    "plum",
+    "powderblue",
+    "purple",
+    "rebeccapurple",
+    "red",
+    "rosybrown",
+    "royalblue",
+    "saddlebrown",
+    "salmon",
+    "sandybrown",
+    "seagreen",
+    "seashell",
+    "sienna",
+    "silver",
+    "skyblue",
+    "slateblue",
+    "slategray",
+    "slategrey",
+    "snow",
+    "springgreen",
+    "steelblue",
+    "tan",
+    "teal",
+    "thistle",
+    "tomato",
+    "transparent",
+    "turquoise",
+    "violet",
+    "wheat",
+    "white",
+    "whitesmoke",
+    "yellow",
+    "yellowgreen",
+]);

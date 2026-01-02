@@ -8,6 +8,11 @@ type InputProps =
         onKeyMap?: KeyMappingTable<React.KeyboardEvent<HTMLInputElement>>;
     };
 
+/**
+ * Wrapper on native HTML element that provides all Element extensions plus:
+ *
+ * - `onKeyMap` prop for easily mapping key combinations to actions
+ */
 export function Input(
     {
         onKeyDown,
